@@ -1,36 +1,94 @@
 import { useState, useRef, useEffect } from 'react'; // Import useRef
-import { getRandomPassage } from './utils/textGenerator';
+import { getRandomPassage, type Difficulty } from './utils/textGenerator';
 import useTypingEngine from './hooks/useTypingEngine';
+import useLocalStorage from './hooks/useLocalStorage';
 
 function App() {
-  const [text, setText] = useState(getRandomPassage('medium').text);
+  const [timeOption, setTimeOption] = useState(60);
+  const [difficulty, setDifficulty] = useState<Difficulty>('medium');
+  const [text, setText] = useState(getRandomPassage(difficulty).text);
+  const [highScore, setHighScore] = useLocalStorage<number>('typing-speed-high-score', 0);
+
+  const { status, timeLeft, typed, wpm, accuracy, startGame, handleInput, resetEngine } = useTypingEngine(timeOption);
   
-  // Grab the new handler
-  const { status, timeLeft, typed, errors, wpm, accuracy, startGame, handleInput } = useTypingEngine(60);
-  
-  // Create a reference to the hidden input so we can focus it
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus input automatically when game starts
   useEffect(() => {
     if (status === 'running' && inputRef.current) {
       inputRef.current.focus();
     }
   }, [status]);
 
+  useEffect(() => {
+    if (status === 'finished') {
+      if (wpm > highScore) {
+        setHighScore(wpm);
+      }
+    }
+  }, [status, wpm, highScore, setHighScore]);
+
+
+  useEffect(() => {
+    resetEngine();
+  }, [timeOption, resetEngine]);
+
+  const handleDifficultyChange = (newDifficulty: Difficulty) => {
+    setDifficulty(newDifficulty);
+    setText(getRandomPassage(newDifficulty).text);
+    resetEngine();
+  };
+
+
   return (
     <div className="min-h-screen bg-neutral-900 text-neutral-0 flex flex-col items-center justify-center p-8 gap-6">
-      <h1 className="text-3xl font-bold text-yellow-400">
-        Typing Speed Test
-      </h1>
-      
+      <div className="flex w-full max-w-2xl justify-between items-end mb-8">
+        <h1 className="text-3xl font-bold text-yellow-400">
+          Typing Speed Test
+        </h1>
+        <div className="flex items-center gap-2 text-neutral-400 font-mono">
+          <span>🏆 Best:</span>
+          <span className="text-xl font-bold text-yellow-400">{highScore}</span>
+          <span>WPM</span>
+        </div>
+      </div>
+
+      {/* --- NEW: Settings Controls --- */}
+      <div className="flex gap-4 p-4 bg-neutral-800 rounded-lg">
+        {/* Difficulty Select */}
+        <select 
+          value={difficulty} 
+          onChange={(e) => handleDifficultyChange(e.target.value as Difficulty)}
+          className="bg-neutral-700 p-2 rounded text-white"
+          disabled={status === 'running'}
+        >
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+
+        {/* Time Select */}
+        <select 
+          value={timeOption} 
+          onChange={(e) => {
+            const val = Number(e.target.value);
+            setTimeOption(val);
+          }}
+          className="bg-neutral-700 p-2 rounded text-white"
+          disabled={status === 'running'}
+        >
+          <option value="30">30s</option>
+          <option value="60">60s</option>
+          <option value="120">120s</option>
+        </select>
+      </div>
+
       {/* Stats Bar */}
       <div className="flex gap-12 text-3xl font-mono font-bold">
         <div className="flex flex-col items-center">
           <span className="text-neutral-500 text-sm uppercase tracking-wider">WPM</span>
           <span className="text-neutral-0">{wpm}</span>
         </div>
-    
+
         <div className="flex flex-col items-center">
           <span className="text-neutral-500 text-sm uppercase tracking-wider">Accuracy</span>
           <span className={accuracy < 80 ? "text-red-500" : "text-neutral-0"}>
@@ -40,7 +98,9 @@ function App() {
 
         <div className="flex flex-col items-center">
           <span className="text-neutral-500 text-sm uppercase tracking-wider">Time</span>
-          <span className="text-blue-400">{timeLeft}</span>
+          <span className="text-blue-400">
+               {status === 'idle' ? timeOption : timeLeft}
+             </span>
         </div>
       </div>
 
