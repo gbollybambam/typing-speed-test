@@ -6,7 +6,7 @@ function App() {
   const [text, setText] = useState(getRandomPassage('medium').text);
   
   // Grab the new handler
-  const { status, timeLeft, typed, errors, startGame, handleInput } = useTypingEngine(60);
+  const { status, timeLeft, typed, errors, wpm, accuracy, startGame, handleInput } = useTypingEngine(60);
   
   // Create a reference to the hidden input so we can focus it
   const inputRef = useRef<HTMLInputElement>(null);
@@ -25,13 +25,27 @@ function App() {
       </h1>
       
       {/* Stats Bar */}
-      <div className="flex gap-8 text-2xl font-mono">
-        <p>Time: <span className="text-blue-400">{timeLeft}s</span></p>
-        <p>Errors: <span className="text-red-500">{errors}</span></p>
+      <div className="flex gap-12 text-3xl font-mono font-bold">
+        <div className="flex flex-col items-center">
+          <span className="text-neutral-500 text-sm uppercase tracking-wider">WPM</span>
+          <span className="text-neutral-0">{wpm}</span>
+        </div>
+    
+        <div className="flex flex-col items-center">
+          <span className="text-neutral-500 text-sm uppercase tracking-wider">Accuracy</span>
+          <span className={accuracy < 80 ? "text-red-500" : "text-neutral-0"}>
+            {accuracy}%
+          </span>
+        </div>
+
+        <div className="flex flex-col items-center">
+          <span className="text-neutral-500 text-sm uppercase tracking-wider">Time</span>
+          <span className="text-blue-400">{timeLeft}</span>
+        </div>
       </div>
 
       {/* The Text Display Area */}
-      <div 
+      <div
         className="relative max-w-2xl text-lg leading-relaxed bg-neutral-800 p-6 rounded-xl cursor-text"
         onClick={() => inputRef.current?.focus()} // Clicking text focuses input
       >
@@ -43,7 +57,7 @@ function App() {
           if (charTyped != null) {
             color = charTyped === char ? 'text-green-500' : 'text-red-500';
           }
-          
+
           return (
             <span key={index} className={color}>{char}</span>
           );
@@ -60,14 +74,14 @@ function App() {
         autoFocus
       />
 
-      <button 
+      <button
         onClick={startGame}
         className="px-6 py-3 bg-blue-600 rounded-lg font-semibold hover:bg-blue-400 transition-colors cursor-pointer"
       >
         {status === 'idle' ? 'Start Test' : 'Restart'}
       </button>
     </div>
-  )
+  );
 }
 
 export default App;
