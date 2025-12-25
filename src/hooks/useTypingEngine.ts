@@ -24,7 +24,29 @@ const useTypingEngine = (initialTime: number = 60) => {
     setErrors(0);
   }, [initialTime]);
 
-  // 3. Return these values so the Component can use them
+  // 3. Countdown Logic
+  useEffect(() => {
+    // Only run if the game is actually running
+    if (status !== 'running') return;
+
+
+    // set up theinterval to tick every 1 seconds (1000ms)
+    const intervalId = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        if (prevTime <= 1) {
+          clearInterval(intervalId);
+          setStatus('finished');
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+
+    // cleanup: clear interval when component unmounts or time changes
+    return () => clearInterval(intervalId);
+  }, [status])
+
+  // 4. Return these values so the Component can use them
   return {
     status,
     timeLeft,

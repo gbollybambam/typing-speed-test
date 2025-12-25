@@ -7,7 +7,7 @@ function App() {
   const [text, setText] = useState(getRandomPassage('medium').text);
 
   // Initialize the hook
-  const { status, timeLeft, startGame } = useTypingEngine(60);
+  const { status, timeLeft, startGame } = useTypingEngine(5);
 
   return (
     <div className="min-h-screen bg-neutral-900 text-neutral-0 flex flex-col items-center justify-center p-8 gap-6">
