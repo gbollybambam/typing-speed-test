@@ -6,7 +6,6 @@ export type GameStatus = 'idle' | 'running' | 'finished';
 const useTypingEngine = (initialTime: number = 60) => {
   // Status: Is the game waiting, running, or done?
   const [status, setStatus] = useState<GameStatus>('idle');
-
   // Timer: How many seconds are left?
   const [timeLeft, setTimeLeft] = useState(initialTime);
 
@@ -24,11 +23,14 @@ const useTypingEngine = (initialTime: number = 60) => {
     setErrors(0);
   }, [initialTime]);
 
+  const stopGame = useCallback(() => {
+    setStatus('finished');
+  }, []);
+
   // 3. Countdown Logic
   useEffect(() => {
     // Only run if the game is actually running
     if (status !== 'running') return;
-
 
     // set up theinterval to tick every 1 seconds (1000ms)
     const intervalId = setInterval(() => {
@@ -44,7 +46,39 @@ const useTypingEngine = (initialTime: number = 60) => {
 
     // cleanup: clear interval when component unmounts or time changes
     return () => clearInterval(intervalId);
-  }, [status])
+  }, [status]);
+
+  const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>, targetText: string) => {
+    if (status === 'finished') return;
+    
+    const val = e.target.value;
+
+    if (status === 'idle') {
+      startGame();
+    }
+
+    // Logic: Did the user add a character or backspace?
+    // We only increment errors if they added a NEW character that is wrong
+    if (val.length > typed.length) {
+      // User typed acharacter
+      const charIndex = val.length - 1;
+      const charTyped = val[charIndex];
+      const charCorrect = targetText[charIndex];
+
+      if (charTyped !== charCorrect) {
+        setErrors((prev) => prev + 1);
+      }
+    }
+
+    // update the visual state
+    setTyped(val);
+
+    // Auto-finish if they typed typed the whole paragraph
+    if (val.length === targetText.length) {
+      stopGame();
+    }
+
+  }, [status, typed, startGame, stopGame]);
 
   // 4. Return these values so the Component can use them
   return {
@@ -53,7 +87,7 @@ const useTypingEngine = (initialTime: number = 60) => {
     typed,
     errors,
     startGame,
-    setTyped, // We export this so the UI can update the input
+    handleInput,
   };
 };
 
