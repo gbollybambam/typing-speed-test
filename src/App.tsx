@@ -1,15 +1,34 @@
-import { useState, useRef, useEffect } from 'react'; // Import useRef
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { getRandomPassage, type Difficulty } from './utils/textGenerator';
-import useTypingEngine from './hooks/useTypingEngine';
+import useTypingEngine, { type Mode } from './hooks/useTypingEngine';
 import useLocalStorage from './hooks/useLocalStorage';
+
+// Components
+import Header from './components/layout/Header';
+import Controls from './components/ui/Controls';
+import StatsDisplay from './components/typing/StatsDisplay';
+import TypingArea from './components/typing/TypingArea';
+import ResultsModal from './components/ui/ResultsModal';
 
 function App() {
   const [timeOption, setTimeOption] = useState(60);
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
-  const [text, setText] = useState(getRandomPassage(difficulty).text);
-  const [highScore, setHighScore] = useLocalStorage<number>('typing-speed-high-score', 0);
+  const [mode, setMode] = useState<Mode>('timed');
 
-  const { status, timeLeft, typed, wpm, accuracy, startGame, handleInput, resetEngine } = useTypingEngine(timeOption);
+  const [text, setText] = useState(() => getRandomPassage('medium').text);
+  const [highScore, setHighScore] = useLocalStorage<number>('typing-speed-high-score', 0);
+  const [resultMessage, setResultMessage] = useState('');
+
+  const { 
+    status, 
+    timer, 
+    typed, 
+    wpm, 
+    accuracy, 
+    startGame, 
+    handleInput, 
+    resetEngine 
+  } = useTypingEngine(mode, timeOption);
   
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -21,16 +40,23 @@ function App() {
 
   useEffect(() => {
     if (status === 'finished') {
-      if (wpm > highScore) {
+      if (highScore === 0 && wpm > 0) {
+        setResultMessage('Baseline Established!');
         setHighScore(wpm);
+      } 
+      else if (wpm > highScore) {
+        setResultMessage('High Score Smashed!');
+        setHighScore(wpm);
+      } 
+      else {
+        setResultMessage('Test Complete!');
       }
     }
   }, [status, wpm, highScore, setHighScore]);
 
-
   useEffect(() => {
     resetEngine();
-  }, [timeOption, resetEngine]);
+  }, [timeOption, mode, resetEngine]);
 
   const handleDifficultyChange = (newDifficulty: Difficulty) => {
     setDifficulty(newDifficulty);
@@ -38,108 +64,100 @@ function App() {
     resetEngine();
   };
 
+  const handleRestart = useCallback(() => {
+    setText(getRandomPassage(difficulty).text); 
+    resetEngine(); 
+  }, [difficulty, resetEngine]);
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-neutral-0 flex flex-col items-center justify-center p-8 gap-6">
-      <div className="flex w-full max-w-2xl justify-between items-end mb-8">
-        <h1 className="text-3xl font-bold text-yellow-400">
-          Typing Speed Test
-        </h1>
-        <div className="flex items-center gap-2 text-neutral-400 font-mono">
-          <span>🏆 Best:</span>
-          <span className="text-xl font-bold text-yellow-400">{highScore}</span>
-          <span>WPM</span>
-        </div>
-      </div>
+    <div 
+      className="min-h-screen bg-neutral-900 text-neutral-0 flex flex-col items-center pt-8 px-4 sm:px-6 font-sans selection:bg-yellow-400/30 touch-manipulation"
+      onClick={() => inputRef.current?.focus()} 
+    >
+      
+      {/* 1. Header */}
+      <Header highScore={highScore} />
 
-      {/* --- NEW: Settings Controls --- */}
-      <div className="flex gap-4 p-4 bg-neutral-800 rounded-lg">
-        {/* Difficulty Select */}
-        <select 
-          value={difficulty} 
-          onChange={(e) => handleDifficultyChange(e.target.value as Difficulty)}
-          className="bg-neutral-700 p-2 rounded text-white"
-          disabled={status === 'running'}
-        >
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
-        </select>
-
-        {/* Time Select */}
-        <select 
-          value={timeOption} 
-          onChange={(e) => {
-            const val = Number(e.target.value);
-            setTimeOption(val);
-          }}
-          className="bg-neutral-700 p-2 rounded text-white"
-          disabled={status === 'running'}
-        >
-          <option value="30">30s</option>
-          <option value="60">60s</option>
-          <option value="120">120s</option>
-        </select>
-      </div>
-
-      {/* Stats Bar */}
-      <div className="flex gap-12 text-3xl font-mono font-bold">
-        <div className="flex flex-col items-center">
-          <span className="text-neutral-500 text-sm uppercase tracking-wider">WPM</span>
-          <span className="text-neutral-0">{wpm}</span>
-        </div>
-
-        <div className="flex flex-col items-center">
-          <span className="text-neutral-500 text-sm uppercase tracking-wider">Accuracy</span>
-          <span className={accuracy < 80 ? "text-red-500" : "text-neutral-0"}>
-            {accuracy}%
-          </span>
-        </div>
-
-        <div className="flex flex-col items-center">
-          <span className="text-neutral-500 text-sm uppercase tracking-wider">Time</span>
-          <span className="text-blue-400">
-               {status === 'idle' ? timeOption : timeLeft}
-             </span>
-        </div>
-      </div>
-
-      {/* The Text Display Area */}
-      <div
-        className="relative max-w-2xl text-lg leading-relaxed bg-neutral-800 p-6 rounded-xl cursor-text"
-        onClick={() => inputRef.current?.focus()} // Clicking text focuses input
-      >
-        {/* Render Text with Colors */}
-        {text.split('').map((char, index) => {
-          const charTyped = typed[index];
-          let color = 'text-neutral-400'; // Default gray
-
-          if (charTyped != null) {
-            color = charTyped === char ? 'text-green-500' : 'text-red-500';
-          }
-
-          return (
-            <span key={index} className={color}>{char}</span>
-          );
-        })}
-      </div>
-
-      {/* Hidden Input Field - The Secret Sauce */}
-      <input
-        ref={inputRef}
-        type="text"
-        className="absolute opacity-0 w-0 h-0" // Hide it visually but keep it functional
-        value={typed}
-        onChange={(e) => handleInput(e, text)}
-        autoFocus
+      {/* 2. Stats Dashboard (Moved UP to match screenshot) */}
+      <StatsDisplay 
+        wpm={wpm} 
+        accuracy={accuracy} 
+        timer={timer} 
+        mode={mode} 
       />
 
-      <button
-        onClick={startGame}
-        className="px-6 py-3 bg-blue-600 rounded-lg font-semibold hover:bg-blue-400 transition-colors cursor-pointer"
-      >
-        {status === 'idle' ? 'Start Test' : 'Restart'}
-      </button>
+      {/* 3. Controls (Moved DOWN to match screenshot) */}
+      <Controls 
+        difficulty={difficulty}
+        setDifficulty={handleDifficultyChange}
+        mode={mode}
+        setMode={setMode}
+        timeOption={timeOption}
+        setTimeOption={setTimeOption}
+        status={status}
+      />
+
+      {/* 4. Main Typing Area */}
+      <div className="relative w-full max-w-5xl flex-1 outline-none mt-4">
+        
+        {/* Blur Effect when Idle */}
+        <div className={`transition-all duration-500 ease-out ${status === 'idle' ? 'blur-[8px] opacity-40 scale-[0.98]' : 'blur-0 opacity-100 scale-100'}`}>
+          <TypingArea text={text} typed={typed} />
+        </div>
+
+        {/* Start Button Overlay */}
+        {status === 'idle' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-10 -mt-12">
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); 
+                startGame();
+              }}
+              className="px-8 py-4 bg-blue-600 text-white text-lg font-bold rounded-xl shadow-lg hover:bg-blue-500 transition-transform active:scale-95"
+            >
+              Start Typing Test
+            </button>
+            <p className="mt-4 text-neutral-300 font-medium text-sm sm:text-base animate-pulse">
+              Or click the text and start typing
+            </p>
+          </div>
+        )}
+        
+        {/* Hidden Input (The Engine) */}
+        <input
+          ref={inputRef}
+          type="text"
+          className="absolute opacity-0 w-0 h-0" 
+          value={typed}
+          onChange={(e) => handleInput(e, text)}
+          autoFocus
+        />
+      </div>
+
+      {/* 5. Floating Restart Button (Visible ONLY during run) */}
+      {status === 'running' && (
+        <div className="fixed bottom-8 z-40 animate-in fade-in slide-in-from-bottom-4">
+           <button
+             onClick={(e) => {
+               e.stopPropagation();
+               handleRestart();
+             }}
+             className="px-6 py-3 bg-neutral-800 text-neutral-300 font-bold text-sm rounded-lg hover:bg-neutral-700 hover:text-white transition-colors border border-neutral-700 shadow-xl flex items-center gap-2"
+           >
+             <span>↻</span> Restart Test
+           </button>
+        </div>
+      )}
+
+      {/* 6. Results Modal */}
+      <ResultsModal 
+        status={status}
+        wpm={wpm}
+        accuracy={accuracy}
+        resultMessage={resultMessage}
+        onRestart={handleRestart}
+      />
+
     </div>
   );
 }

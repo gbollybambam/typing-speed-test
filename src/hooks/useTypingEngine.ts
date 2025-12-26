@@ -1,25 +1,32 @@
 import { useState, useEffect, useCallback } from 'react';
 import { calculateAccuracy, calculateWPM } from '../utils/calculateStats';
 
-// 1. Define the possible states of the game
 export type GameStatus = 'idle' | 'running' | 'finished';
+export type Mode = 'timed' | 'passage'; // 👈 New Type
 
-const useTypingEngine = (initialTime: number = 60) => {
+const useTypingEngine = (mode: Mode, timeOption: number) => {
   const [status, setStatus] = useState<GameStatus>('idle');
-  const [timeLeft, setTimeLeft] = useState(initialTime);
+  
+  // In 'timed' mode, this tracks time remaining.
+  // In 'passage' mode, this tracks total time elapsed (starts at 0).
+  const [timer, setTimer] = useState(mode === 'timed' ? timeOption : 0);
+  
   const [typed, setTyped] = useState<string>('');
   const [errors, setErrors] = useState(0);
   const [totalKeystrokes, setTotalKeystrokes] = useState(0);
 
+  // Helper to determine initial timer value based on mode
+  const getInitialTimer = useCallback(() => {
+    return mode === 'timed' ? timeOption : 0;
+  }, [mode, timeOption]);
 
-  // Helper to start the game
   const startGame = useCallback(() => {
     setStatus('running');
-    setTimeLeft(initialTime);
+    setTimer(getInitialTimer());
     setTyped('');
     setErrors(0);
     setTotalKeystrokes(0);
-  }, [initialTime]);
+  }, [getInitialTimer]);
 
   const stopGame = useCallback(() => {
     setStatus('finished');
@@ -27,32 +34,35 @@ const useTypingEngine = (initialTime: number = 60) => {
 
   const resetEngine = useCallback(() => {
     setStatus('idle');
-    setTimeLeft(initialTime);
+    setTimer(getInitialTimer());
     setTyped('');
     setErrors(0);
     setTotalKeystrokes(0);
-  }, [initialTime])
+  }, [getInitialTimer]);
 
-
-  // Countdown Logic
+  // Timer Logic - Handles both Count Down and Count Up
   useEffect(() => {
     if (status !== 'running') return;
 
     const intervalId = setInterval(() => {
-      setTimeLeft((prevTime) => {
-        if (prevTime <= 1) {
-          clearInterval(intervalId);
-          setStatus('finished');
-          return 0;
-        }
-        return prevTime - 1;
+      setTimer((prev) => {
+        // TIMED MODE: Count Down
+        if (mode === 'timed') {
+          if (prev <= 1) {
+            clearInterval(intervalId);
+            setStatus('finished');
+            return 0;
+          }
+          return prev - 1;
+        } 
+        
+        // PASSAGE MODE: Count Up
+        return prev + 1; 
       });
     }, 1000);
 
-    // cleanup: clear interval when component unmounts or time changes
     return () => clearInterval(intervalId);
-  }, [status]);
-
+  }, [status, mode]);
 
   const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>, targetText: string) => {
     if (status === 'finished') return;
@@ -70,7 +80,6 @@ const useTypingEngine = (initialTime: number = 60) => {
       const charTyped = val[charIndex];
       const charCorrect = targetText[charIndex];
 
-
       if (charTyped !== charCorrect) {
         setErrors((prev) => prev + 1);
       }
@@ -81,21 +90,22 @@ const useTypingEngine = (initialTime: number = 60) => {
     if (val.length === targetText.length) {
       stopGame();
     }
-
   }, [status, typed, startGame, stopGame]);
 
-
-  const timeElapsed = initialTime - timeLeft;
+  // Calculate elapsed time for WPM math
+  const timeElapsed = mode === 'timed' ? (timeOption - timer) : timer;
+  
   const accuracy = calculateAccuracy(totalKeystrokes, errors);
   const wpm = calculateWPM(typed.length, timeElapsed);
 
   return {
     status,
-    timeLeft,
+    timer,
     typed,
     errors,
     accuracy,
     wpm,
+    totalKeystrokes,
     startGame,
     resetEngine,
     handleInput,
