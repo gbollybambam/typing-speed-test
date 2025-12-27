@@ -1,9 +1,7 @@
-import React from 'react';
 import restartIcon from '../../assets/images/icon-restart.svg';
 import completedIcon from '../../assets/images/icon-completed.svg';
 import star1 from '../../assets/images/pattern-star-1.svg';
 import star2 from '../../assets/images/pattern-star-2.svg';
-// 👇 NEW ASSETS IMPORTED
 import newPbIcon from '../../assets/images/icon-new-pb.svg';
 import confettiPattern from '../../assets/images/pattern-confetti.svg';
 
@@ -42,30 +40,25 @@ const ResultsModal = ({
     buttonText = "Beat This Score";
   }
 
-  // Stat boxes are transparent with silver borders
-  const statBoxClass = "bg-transparent border border-neutral-800 rounded-xl p-5 w-full flex flex-col items-start gap-1";
+  const statBoxClass = "bg-transparent border border-neutral-800 rounded-xl p-5 w-full md:w-48 flex flex-col items-start gap-1";
 
   return (
-    // z-40 ensures it sits BEHIND the Header
     <div className="fixed inset-0 bg-[#0A0A0A] z-40 flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 overflow-hidden">
       
       {/* --- BACKGROUND DECORATIONS --- */}
-      
-      {/* 1. Stars (Always visible, slightly different animation) */}
       <img 
-        src={star1} 
+        src={star2} 
         alt="" 
         className="absolute top-32 left-8 w-8 h-8 opacity-80 animate-pulse" 
         style={{ animationDuration: '3s' }}
       />
       <img 
-        src={star2} 
+        src={star1} 
         alt="" 
         className="absolute bottom-40 right-8 w-10 h-10 opacity-80 animate-pulse" 
         style={{ animationDuration: '4s' }}
       />
       
-      {/* 2. Confetti Pattern (Only for High Score) */}
       {isHighScore && (
         <img 
           src={confettiPattern} 
@@ -75,19 +68,17 @@ const ResultsModal = ({
       )}
 
       {/* --- CONTENT --- */}
-      <div className="w-full max-w-sm flex flex-col items-center text-center relative z-10 pt-10">
+      <div className="w-full max-w-sm md:max-w-3xl flex flex-col items-center text-center relative z-10 pt-10">
         
         {/* ICON */}
         <div className="mb-6">
           {isHighScore ? (
-            // ✅ High Score: New Personal Best Icon
             <img 
               src={newPbIcon} 
               alt="New High Score!" 
               className="w-16 h-16 animate-bounce"
             />
           ) : (
-            // ✅ Normal: Completed Icon
             <img 
               src={completedIcon} 
               alt="Completed" 
@@ -96,16 +87,16 @@ const ResultsModal = ({
           )}
         </div>
 
-        <h2 className="text-2xl font-bold text-white mb-2">
+        <h2 className="text-3xl font-bold text-white mb-3">
           {resultMessage}
         </h2>
         
-        <p className="text-neutral-400 text-sm leading-relaxed mb-8 px-4">
+        <p className="text-neutral-400 text-sm md:text-base leading-relaxed mb-10 px-4">
           {subtitle}
         </p>
         
-        {/* Stats Grid */}
-        <div className="w-full flex flex-col gap-3 mb-12">
+        {/* STATS GRID */}
+        <div className="w-full flex flex-col md:flex-row justify-center gap-4 mb-12">
           
           <div className={statBoxClass}>
             <span className="text-neutral-500 text-sm font-medium">WPM:</span>
@@ -133,7 +124,7 @@ const ResultsModal = ({
         {/* Restart Button */}
         <button 
           onClick={onRestart}
-          className="w-auto px-8 py-3 bg-white text-black font-bold text-base rounded-xl hover:bg-neutral-200 transition-transform active:scale-95 flex items-center gap-2 shadow-lg"
+          className="w-auto px-8 py-3.5 bg-white text-black font-bold text-base rounded-xl hover:bg-neutral-200 transition-transform active:scale-95 flex items-center gap-2 shadow-lg"
         >
           <span>{buttonText}</span>
           <img 
