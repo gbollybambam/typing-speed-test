@@ -1,3 +1,5 @@
+import restartIcon from './assets/images/icon-restart.svg';
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { getRandomPassage, type Difficulty } from './utils/textGenerator';
 import useTypingEngine, { type Mode } from './hooks/useTypingEngine';
@@ -27,7 +29,8 @@ function App() {
     accuracy, 
     startGame, 
     handleInput, 
-    resetEngine 
+    resetEngine,
+    errors
   } = useTypingEngine(mode, timeOption);
   
   const inputRef = useRef<HTMLInputElement>(null);
@@ -76,9 +79,11 @@ function App() {
     >
       
       {/* 1. Header */}
-      <Header highScore={highScore} />
+      <div className="relative z-50 w-full flex justify-center">
+        <Header highScore={highScore} />
+      </div>
 
-      {/* 2. Stats Dashboard (Moved UP to match screenshot) */}
+      {/* 2. Stats Dashboard */}
       <StatsDisplay 
         wpm={wpm} 
         accuracy={accuracy} 
@@ -86,7 +91,7 @@ function App() {
         mode={mode} 
       />
 
-      {/* 3. Controls (Moved DOWN to match screenshot) */}
+      {/* 3. Controls */}
       <Controls 
         difficulty={difficulty}
         setDifficulty={handleDifficultyChange}
@@ -98,7 +103,8 @@ function App() {
       />
 
       {/* 4. Main Typing Area */}
-      <div className="relative w-full max-w-5xl flex-1 outline-none mt-4">
+      {/* ✅ FIXED: Removed 'flex-1'. Added 'min-h-[300px]' and 'mb-32' so the bottom border shows clearly. */}
+      <div className="relative w-full max-w-5xl outline-none mt-6 border-y border-neutral-700/50 py-8 min-h-[300px] mb-32">
         
         {/* Blur Effect when Idle */}
         <div className={`transition-all duration-500 ease-out ${status === 'idle' ? 'blur-[8px] opacity-40 scale-[0.98]' : 'blur-0 opacity-100 scale-100'}`}>
@@ -117,13 +123,13 @@ function App() {
             >
               Start Typing Test
             </button>
-            <p className="mt-4 text-neutral-300 font-medium text-sm sm:text-base animate-pulse">
+            <p className="mt-4 text-neutral-300 font-medium text-lg sm:text-base animate-pulse">
               Or click the text and start typing
             </p>
           </div>
         )}
         
-        {/* Hidden Input (The Engine) */}
+        {/* Hidden Input */}
         <input
           ref={inputRef}
           type="text"
@@ -134,7 +140,7 @@ function App() {
         />
       </div>
 
-      {/* 5. Floating Restart Button (Visible ONLY during run) */}
+      {/* 5. Floating Restart Button */}
       {status === 'running' && (
         <div className="fixed bottom-8 z-40 animate-in fade-in slide-in-from-bottom-4">
            <button
@@ -142,18 +148,26 @@ function App() {
                e.stopPropagation();
                handleRestart();
              }}
-             className="px-6 py-3 bg-neutral-800 text-neutral-300 font-bold text-sm rounded-lg hover:bg-neutral-700 hover:text-white transition-colors border border-neutral-700 shadow-xl flex items-center gap-2"
+             className="px-6 py-3.5 bg-neutral-800 text-neutral-200 font-bold text-base rounded-xl hover:bg-neutral-700 hover:text-white transition-all border border-neutral-700/50 shadow-2xl flex items-center gap-3 active:scale-95"
            >
-             <span>↻</span> Restart Test
+             <span>Restart Test</span>
+             <img 
+               src={restartIcon} 
+               alt="Restart" 
+               className="w-4 h-4 text-neutral-400 opacity-80" 
+             />
            </button>
         </div>
       )}
 
+     {/* 6. Results Modal */}
       {/* 6. Results Modal */}
       <ResultsModal 
         status={status}
         wpm={wpm}
         accuracy={accuracy}
+        correctChars={typed.length - errors} // Logic: Total length - errors = Correct
+        errorChars={errors}
         resultMessage={resultMessage}
         onRestart={handleRestart}
       />
