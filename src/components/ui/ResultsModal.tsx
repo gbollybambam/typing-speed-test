@@ -34,10 +34,9 @@ const ResultsModal = ({ status, wpm, accuracy, correctChars, errorChars, resultM
     buttonText = "Beat This Score";
   }
 
-  // ✅ NEW: Share Logic
+
   const handleShare = () => {
-    // Replace [URL] with your actual Vercel link later
-    const text = `🚀 I just hit ${wpm} WPM with ${accuracy}% accuracy on the FM30 Typing Speed Test!\n\nCan you beat my score? Try it here: https://typing-speed-test.vercel.app`;
+    const text = `🚀 I just hit ${wpm} WPM with ${accuracy}% accuracy on the FM30 Typing Speed Test!\n\nCan you beat my score? Try it here: https://typing-speed-test-blik.vercel.app/`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
