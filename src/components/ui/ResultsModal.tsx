@@ -3,6 +3,9 @@ import restartIcon from '../../assets/images/icon-restart.svg';
 import completedIcon from '../../assets/images/icon-completed.svg';
 import star1 from '../../assets/images/pattern-star-1.svg';
 import star2 from '../../assets/images/pattern-star-2.svg';
+// 👇 NEW ASSETS IMPORTED
+import newPbIcon from '../../assets/images/icon-new-pb.svg';
+import confettiPattern from '../../assets/images/pattern-confetti.svg';
 
 interface ResultsModalProps {
   status: 'idle' | 'running' | 'finished';
@@ -39,51 +42,52 @@ const ResultsModal = ({
     buttonText = "Beat This Score";
   }
 
-  // ✅ FIX: Removed 'bg-[#1C1C1C]'. Now it is 'bg-transparent' with just the border.
+  // Stat boxes are transparent with silver borders
   const statBoxClass = "bg-transparent border border-neutral-800 rounded-xl p-5 w-full flex flex-col items-start gap-1";
 
   return (
-    // z-40 ensures it sits BEHIND the Header (which is z-50 in App.tsx)
-    <div className="fixed inset-0 bg-[#0A0A0A] z-40 flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
+    // z-40 ensures it sits BEHIND the Header
+    <div className="fixed inset-0 bg-[#0A0A0A] z-40 flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 overflow-hidden">
       
-      {/* Background Stars */}
+      {/* --- BACKGROUND DECORATIONS --- */}
+      
+      {/* 1. Stars (Always visible, slightly different animation) */}
       <img 
-        src={star2} 
+        src={star1} 
         alt="" 
         className="absolute top-32 left-8 w-8 h-8 opacity-80 animate-pulse" 
         style={{ animationDuration: '3s' }}
       />
       <img 
-        src={star1} 
+        src={star2} 
         alt="" 
-        className="absolute bottom-20 right-8 w-10 h-10 opacity-80 animate-pulse" 
+        className="absolute bottom-40 right-8 w-10 h-10 opacity-80 animate-pulse" 
         style={{ animationDuration: '4s' }}
       />
       
-      {/* Confetti (High Score only) */}
+      {/* 2. Confetti Pattern (Only for High Score) */}
       {isHighScore && (
-        <div className="absolute inset-x-0 bottom-0 h-1/3 overflow-hidden pointer-events-none">
-           <div className="absolute bottom-0 left-[10%] w-2 h-2 bg-red-500 animate-bounce" style={{ animationDuration: '1s' }}></div>
-           <div className="absolute bottom-10 left-[20%] w-2 h-2 bg-blue-500 animate-bounce" style={{ animationDuration: '1.5s' }}></div>
-           <div className="absolute bottom-5 left-[50%] w-2 h-2 bg-yellow-400 animate-bounce" style={{ animationDuration: '1.2s' }}></div>
-           <div className="absolute bottom-12 right-[20%] w-2 h-2 bg-green-500 animate-bounce" style={{ animationDuration: '1.3s' }}></div>
-        </div>
+        <img 
+          src={confettiPattern} 
+          alt="Confetti" 
+          className="absolute bottom-0 inset-x-0 w-full object-cover opacity-90 pointer-events-none animate-in slide-in-from-bottom-10 duration-700"
+        />
       )}
 
-      {/* Content */}
+      {/* --- CONTENT --- */}
       <div className="w-full max-w-sm flex flex-col items-center text-center relative z-10 pt-10">
         
-        {/* Icon */}
+        {/* ICON */}
         <div className="mb-6">
           {isHighScore ? (
-            <div className="animate-bounce">
-              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                 <path d="M11 2L10 4M14.5 3L13.5 5.5M6 8L3 8M7 13L4.5 15M20 11L22 10M17.5 7L19.5 5" stroke="#FACC15" strokeWidth="2" strokeLinecap="round"/>
-                 <path d="M17.5 13.5L13 18L5.5 10.5L10 6L17.5 13.5Z" stroke="#FACC15" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                 <path d="M12.5 12L15 9.5" stroke="#FACC15" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </div>
+            // ✅ High Score: New Personal Best Icon
+            <img 
+              src={newPbIcon} 
+              alt="New High Score!" 
+              className="w-16 h-16 animate-bounce"
+            />
           ) : (
+            // ✅ Normal: Completed Icon
             <img 
               src={completedIcon} 
               alt="Completed" 

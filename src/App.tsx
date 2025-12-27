@@ -1,5 +1,3 @@
-import restartIcon from './assets/images/icon-restart.svg';
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { getRandomPassage, type Difficulty } from './utils/textGenerator';
 import useTypingEngine, { type Mode } from './hooks/useTypingEngine';
@@ -11,6 +9,7 @@ import Controls from './components/ui/Controls';
 import StatsDisplay from './components/typing/StatsDisplay';
 import TypingArea from './components/typing/TypingArea';
 import ResultsModal from './components/ui/ResultsModal';
+import restartIcon from './assets/images/icon-restart.svg';
 
 function App() {
   const [timeOption, setTimeOption] = useState(60);
@@ -30,19 +29,27 @@ function App() {
     startGame, 
     handleInput, 
     resetEngine,
-    errors
+    errors 
   } = useTypingEngine(mode, timeOption);
   
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  // 🛑 FIX: Use a ref to prevent double-checking results
+  const resultsProcessed = useRef(false);
 
   useEffect(() => {
     if (status === 'running' && inputRef.current) {
       inputRef.current.focus();
+      // Reset the processed flag when game starts
+      resultsProcessed.current = false;
     }
   }, [status]);
 
   useEffect(() => {
     if (status === 'finished') {
+      // 🛑 FIX: If we already processed this run, stop here.
+      if (resultsProcessed.current) return;
+
       if (highScore === 0 && wpm > 0) {
         setResultMessage('Baseline Established!');
         setHighScore(wpm);
@@ -54,6 +61,9 @@ function App() {
       else {
         setResultMessage('Test Complete!');
       }
+
+      // Mark as processed so the 'setHighScore' re-render doesn't trigger this again
+      resultsProcessed.current = true;
     }
   }, [status, wpm, highScore, setHighScore]);
 
@@ -70,6 +80,7 @@ function App() {
   const handleRestart = useCallback(() => {
     setText(getRandomPassage(difficulty).text); 
     resetEngine(); 
+    // Ensure modal closes by resetting engine which sets status to idle
   }, [difficulty, resetEngine]);
 
   return (
@@ -78,7 +89,7 @@ function App() {
       onClick={() => inputRef.current?.focus()} 
     >
       
-      {/* 1. Header */}
+      {/* 1. Header - Wrapped in z-50 to stay on top of Results Modal */}
       <div className="relative z-50 w-full flex justify-center">
         <Header highScore={highScore} />
       </div>
@@ -103,7 +114,6 @@ function App() {
       />
 
       {/* 4. Main Typing Area */}
-      {/* ✅ FIXED: Removed 'flex-1'. Added 'min-h-[300px]' and 'mb-32' so the bottom border shows clearly. */}
       <div className="relative w-full max-w-5xl outline-none mt-6 border-y border-neutral-700/50 py-8 min-h-[300px] mb-32">
         
         {/* Blur Effect when Idle */}
@@ -160,13 +170,12 @@ function App() {
         </div>
       )}
 
-     {/* 6. Results Modal */}
       {/* 6. Results Modal */}
       <ResultsModal 
         status={status}
         wpm={wpm}
         accuracy={accuracy}
-        correctChars={typed.length - errors} // Logic: Total length - errors = Correct
+        correctChars={typed.length - errors} 
         errorChars={errors}
         resultMessage={resultMessage}
         onRestart={handleRestart}
