@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import restartIcon from '../../assets/images/icon-restart.svg';
 import completedIcon from '../../assets/images/icon-completed.svg';
 import star1 from '../../assets/images/pattern-star-1.svg';
