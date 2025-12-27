@@ -1,63 +1,126 @@
+# ⌨️ Typing Speed Test - FM30 Hackathon Submission
 
+![Design Preview](./src/assets/images/desktop-preview.jpg)
 
-#### Test Controls
+> **Note to Judges:** This is my submission for the **Frontend Mentor FM30 Hackathon**. I focused heavily on "Mobile-First" performance and creating a "Game-like" feel with sound effects and animations.
 
-- Start a test by clicking the start button or by clicking the passage and typing
-- Select a difficulty level (Easy, Medium, Hard) for passages of varying complexity
-- Switch between "Timed (60s)" mode and "Passage" mode (timer counts up, no limit)
-- Restart at any time to get a new random passage from the selected difficulty
+## 🔗 Links
 
-#### Typing Experience
+-   **Live Site URL:** [Add your Vercel/Netlify Link Here]
+-   **Frontend Mentor Solution:** [Add your FM Solution Link Here]
 
-- See real-time WPM, accuracy, and time stats while typing
-- See visual feedback showing correct characters (green), errors (red/underlined), and cursor position
-- Correct mistakes with backspace (original errors still count against accuracy)
+## 📝 The Challenge
 
-#### Results & Progress
+The goal was to build a functional Typing Speed Test app that tracks **Words Per Minute (WPM)**, **Accuracy**, and **Characters**.
 
-- View results showing WPM, accuracy, and characters (correct/incorrect) after completing a test
-- See a "Baseline Established!" message on their first test, setting their personal best
-- See a "High Score Smashed!" celebration with confetti when beating their personal best
-- Have their personal best persist across sessions via localStorage
+**Core Requirements:**
+-   Real-time typing feedback (Green for correct, Red for errors).
+-   Calculate WPM and Accuracy dynamically.
+-   Filter by Difficulty (Easy, Medium, Hard).
+-   Responsiveness (Mobile & Desktop).
+-   Persist High Score using `localStorage`.
 
-#### UI & Responsiveness
+**✨ My Extra Features:**
+-   **Sound Engine:** Mechanical keyboard clicks, error thuds, and victory chimes.
+-   **Auto-Scroll:** The text area automatically scrolls to keep the active line centered (crucial for long passages).
+-   **Mobile Guard:** Disabled mobile auto-correct, capitalization, and suggestions for a raw input experience.
+-   **Confetti Celebration:** A visual reward for breaking a high score.
+-   **Extended Modes:** Added 30s, 60s, 120s options alongside the standard Passage mode.
 
-- View the optimal layout depending on their device's screen size
-- See hover and focus states for all interactive elements
+---
 
-### Data Model
+## 🛠️ Built With
 
-A `data.json` file is provided with passages organized by difficulty. Each passage has the following structure:
+-   **React 18** - For component-based UI architecture.
+-   **TypeScript** - For type safety, especially with the intricate Typing Engine logic.
+-   **Vite** - For lightning-fast development and build.
+-   **Tailwind CSS** - For pixel-perfect styling and complex responsive layouts.
+-   **HTML5 Audio API** - For the custom sound engine.
+-   **Figma** - Followed the design system strictly for pixel perfection.
 
-```json
-{
-  "id": "easy-1",
-  "text": "The sun rose over the quiet town. Birds sang in the trees as people woke up and started their day."
-}
-```
+---
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `id` | string | Unique identifier for the passage (e.g., "easy-1", "medium-3", "hard-10") |
-| `text` | string | The passage text the user will type |
+## 🧠 My Process
 
-### Expected Behaviors
+### 1. The Architecture (Custom Hooks)
+I decided early on to separate the logic from the UI. I built a custom hook `useTypingEngine.ts` that handles:
+-   Keystroke validation.
+-   WPM calculation (Standardized: 5 characters = 1 word).
+-   Timer state management.
+-   Status transitions (`idle` -> `running` -> `finished`).
 
-- **Starting the test**: The timer begins when the user starts typing or clicks the start button. Clicking directly on the passage text and typing also initiates the test
-- **Timed mode**: 60-second countdown. Test ends when timer reaches 0 or passage is completed
-- **Passage mode**: Timer counts up with no limit. Test ends when the full passage is typed
-- **Error handling**: Incorrect characters are highlighted in red with an underline. Backspace allows corrections, but errors still count against accuracy
-- **Results logic**:
-  - First completed test: "Baseline Established!" - sets initial personal best
-  - New personal best: "High Score Smashed!" with confetti animation
-  - Normal completion: "Test Complete!" with encouragement message
+This made the `App.tsx` component clean and focused purely on layout composition.
 
-### Data Persistence
+### 2. The Sound Engine
+A typing test feels "dead" without feedback. I created a `useSoundEngine.ts` hook using `useCallback` to preload audio files (`click.wav`, `error.wav`).
+* **Challenge:** Audio lag on rapid typing.
+* **Solution:** I reset `audio.currentTime = 0` before every play call to ensure instant feedback even when typing 100+ WPM.
 
-The personal best score should persist across browser sessions using `localStorage`. When a user beats their high score, the new value should be saved and displayed on subsequent visits.
+### 3. Solving the "Mobile Keyboard" Problem
+Testing on my phone revealed a huge issue: Auto-correct would change "teh" to "the", ruining the accuracy score.
+* **Solution:** I implemented aggressive input guarding on the hidden input field:
+    ```jsx
+    <input
+      autoComplete="off"
+      autoCorrect="off"
+      autoCapitalize="off"
+      spellCheck="false"
+    />
+    ```
+    This forces the mobile keyboard into a "dumb" mode, perfect for speed testing.
 
+### 4. Auto-Scrolling Logic
+For the "Passage" mode, the text often exceeded the visible container. I used React `refs` to track the active character's position relative to the container.
+* **Math:** `cursorTop - (containerHeight / 2) + offset`
+* **Result:** The text smoothly scrolls to keep the user's eyes focused on the center of the screen.
 
+### 5. Pixel-Perfect Responsiveness
+The design for Desktop and Mobile was drastically different.
+* **Mobile:** Uses a stacked layout with Dropdown menus for controls.
+* **Desktop:** Uses a Dashboard layout with "Pill-shaped" inline buttons.
+* I used Tailwind's `md:` and `lg:` breakpoints to completely swap navigation styles based on the viewport, ensuring the app looks native on both devices.
 
+---
 
-1. Share your solution page in the **#finished-projects** channel of our [community](https://www.frontendmentor.io/community). 
+## 📚 What I Learned
 
+Coming from a **Pure Mathematics** background, I enjoyed the logic behind the WPM calculation and the state management of the timer.
+
+However, the biggest takeaway was **DOM manipulation via Refs**. Building the Auto-Scroll feature required me to calculate offset positions of specific `span` elements dynamically. It gave me a much deeper appreciation for how the browser renders layout.
+
+I also learned the importance of **Z-Index management**. I initially had the Results Modal conflict with the Header. Debugging the stacking context taught me how to properly layer UI elements (Header `z-50` > Modal `z-40` > Content `z-0`).
+
+---
+
+## 🔮 Continued Development
+
+In the future, I plan to:
+1.  **Backend Integration:** Connect this to a Django REST Framework (DRF) backend to save user history permanently, not just in LocalStorage.
+2.  **Multiplayer Mode:** Use WebSockets to allow users to race against each other in real-time.
+
+---
+
+## 🚀 Setup Project Locally
+
+1.  **Clone the repository**
+    ```bash
+    git clone [your-repo-link]
+    cd typing-speed-test
+    ```
+
+2.  **Install dependencies**
+    ```bash
+    npm install
+    ```
+
+3.  **Run the development server**
+    ```bash
+    npm run dev
+    ```
+
+---
+
+## 👤 Author
+
+-   **Frontend Mentor** - [@gbollybambam](https://www.frontendmentor.io/profile/gbollybambam)
+-   **GitHub** - [@gbollybambam](https://github.com/gbollybambam)
