@@ -6,7 +6,7 @@
 
 ## 🔗 Links
 
--   **Live Site URL:** [Add your Vercel/Netlify Link Here]
+-   **Live Site URL:** [Add your Vercel Link Here]
 -   **Frontend Mentor Solution:** [Add your FM Solution Link Here]
 
 ## 📝 The Challenge
@@ -24,8 +24,9 @@ The goal was to build a functional Typing Speed Test app that tracks **Words Per
 -   **Sound Engine:** Mechanical keyboard clicks, error thuds, and victory chimes.
 -   **Auto-Scroll:** The text area automatically scrolls to keep the active line centered (crucial for long passages).
 -   **Mobile Guard:** Disabled mobile auto-correct, capitalization, and suggestions for a raw input experience.
--   **Confetti Celebration:** A visual reward for breaking a high score.
--   **Extended Modes:** Added 30s, 60s, 120s options alongside the standard Passage mode.
+-   **History Tracking:** A dedicated modal that saves and displays your last 10 test results (WPM, Accuracy, Date).
+-   **Social Sharing:** Copy your result to the clipboard with one click to challenge friends.
+-   **Extended Modes:** Added **15s**, 30s, 60s, and 120s options alongside the standard Passage mode.
 
 ---
 
@@ -74,11 +75,9 @@ For the "Passage" mode, the text often exceeded the visible container. I used Re
 * **Math:** `cursorTop - (containerHeight / 2) + offset`
 * **Result:** The text smoothly scrolls to keep the user's eyes focused on the center of the screen.
 
-### 5. Pixel-Perfect Responsiveness
-The design for Desktop and Mobile was drastically different.
-* **Mobile:** Uses a stacked layout with Dropdown menus for controls.
-* **Desktop:** Uses a Dashboard layout with "Pill-shaped" inline buttons.
-* I used Tailwind's `md:` and `lg:` breakpoints to completely swap navigation styles based on the viewport, ensuring the app looks native on both devices.
+### 5. Persistent History & Sharing
+I wanted users to track their progress over time, so I expanded the `localStorage` implementation to store an array of history objects (Date, Mode, WPM, Accuracy).
+* I also added a `navigator.clipboard.writeText()` function to the Results modal, allowing users to instantly copy a formatted challenge string to share on social media.
 
 ---
 
@@ -104,7 +103,7 @@ In the future, I plan to:
 
 1.  **Clone the repository**
     ```bash
-    git clone [your-repo-link]
+    git clone [https://github.com/gbollybambam/typing-speed-test.git](https://github.com/gbollybambam/typing-speed-test.git)
     cd typing-speed-test
     ```
 
