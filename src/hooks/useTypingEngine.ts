@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { calculateAccuracy, calculateWPM } from '../utils/calculateStats';
 
 export type GameStatus = 'idle' | 'running' | 'finished';
-export type Mode = 'timed' | 'passage'; // 👈 New Type
+export type Mode = 'timed' | 'passage';
 
 const useTypingEngine = (mode: Mode, timeOption: number) => {
   const [status, setStatus] = useState<GameStatus>('idle');
@@ -64,20 +64,49 @@ const useTypingEngine = (mode: Mode, timeOption: number) => {
     return () => clearInterval(intervalId);
   }, [status, mode]);
 
+  // ✅ FIXED: The Robust handleInput with Mobile Guards
   const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>, targetText: string) => {
     if (status === 'finished') return;
     
-    const val = e.target.value;
+    const inputValue = e.target.value;
 
+    // 1. Auto-start on first input
     if (status === 'idle') {
-      startGame();
+      setStatus('running');
     }
 
-    setTotalKeystrokes((prev) => prev + 1);
+    // --- 🛡️ MOBILE KEYBOARD GUARD START ---
+    
+    // Guard 1: The "Double Space" Blocker
+    // If user types a space, BUT the previous char was also a space,
+    // AND the target text does NOT expect a space there...
+    // The user is likely mashing space (which triggers 'period' auto-correct on phones).
+    const lastChar = inputValue.slice(-1);
+    if (lastChar === ' ' && typed.endsWith(' ') && targetText[typed.length] !== ' ') {
+      // Reject this input entirely.
+      return; 
+    }
 
-    if (val.length > typed.length) {
-      const charIndex = val.length - 1;
-      const charTyped = val[charIndex];
+    // Guard 2: The "Period" Rejection
+    // If the input length jumped (or didn't match expected +1) and ends in ". "
+    // It means the phone just auto-replaced "  " with ". ".
+    // We reject this change to prevent the text from desyncing.
+    if (inputValue.endsWith('. ') && !typed.endsWith('.')) {
+      // Double check if the text actually wanted a period there. If not, block it.
+      const expectedChar = targetText[typed.length];
+      if (expectedChar !== '.') {
+         return;
+      }
+    }
+    
+    // --- 🛡️ GUARD END ---
+
+    // 2. Only increment keystrokes if the input actually changed (and wasn't blocked)
+    if (inputValue.length > typed.length) {
+      setTotalKeystrokes((prev) => prev + 1);
+      
+      const charIndex = inputValue.length - 1;
+      const charTyped = inputValue[charIndex];
       const charCorrect = targetText[charIndex];
 
       if (charTyped !== charCorrect) {
@@ -85,18 +114,23 @@ const useTypingEngine = (mode: Mode, timeOption: number) => {
       }
     }
 
-    setTyped(val);
+    // 3. Update State
+    setTyped(inputValue);
 
-    if (val.length === targetText.length) {
+    // 4. Check for Finish (Passage Mode)
+    if (mode === 'passage' && inputValue.length === targetText.length) {
       stopGame();
     }
-  }, [status, typed, startGame, stopGame]);
+  }, [status, typed, mode, startGame, stopGame]);
 
-  // Calculate elapsed time for WPM math
+  // Calculate stats
   const timeElapsed = mode === 'timed' ? (timeOption - timer) : timer;
   
-  const accuracy = calculateAccuracy(totalKeystrokes, errors);
-  const wpm = calculateWPM(typed.length, timeElapsed);
+  // Prevent division by zero or negative time
+  const safeTimeElapsed = timeElapsed <= 0 ? 1 : timeElapsed; 
+  
+  const accuracy = calculateAccuracy(typed.length, errors); // Use typed length for accuracy base
+  const wpm = calculateWPM(typed.length, safeTimeElapsed);
 
   return {
     status,
