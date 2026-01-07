@@ -142,7 +142,7 @@ function App() {
             <p className="mt-4 text-neutral-300 font-medium text-lg sm:text-base animate-pulse">Or click the text and start typing</p>
           </div>
         )}
-        <input ref={inputRef} type="email" className="absolute opacity-0 w-0 h-0 top-0 left-0" value={typed} onChange={(e) => handleInput(e, text)} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" data-gramm="false" />
+        <input ref={inputRef} type="text" className="absolute opacity-0 w-0 h-0 top-0 left-0" value={typed} onChange={(e) => handleInput(e, text)} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" data-gramm="false" />
       </div>
 
       {status === 'running' && (
