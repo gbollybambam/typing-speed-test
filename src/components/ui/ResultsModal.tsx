@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
+import { toPng } from 'html-to-image';
 import PerformanceChart from './PerformanceChart';
+import ResultCard from './ResultCard';
 import { type WpmPoint } from '../../hooks/useTypingEngine';
 
+// Images
 import restartIcon from '../../assets/images/icon-restart.svg';
 import completedIcon from '../../assets/images/icon-completed.svg';
 import star1 from '../../assets/images/pattern-star-1.svg';
@@ -22,10 +25,36 @@ interface ResultsModalProps {
 
 const ResultsModal = ({ status, wpm, accuracy, correctChars, errorChars, history, resultMessage, onRestart }: ResultsModalProps) => {
   
+  // --- 1. HOOKS (Must be at the top, unconditional) ---
   const [copied, setCopied] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
-  if (status !== 'finished') return null;
-  
+  const handleShare = useCallback(() => {
+    const text = `🚀 I just hit ${wpm} WPM with ${accuracy}% accuracy on the FM30 Typing Speed Test!\n\nCan you beat my score? Try it here: https://typing-speed-test-blik.vercel.app/`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [wpm, accuracy]);
+
+  const handleDownload = useCallback(async () => {
+    if (cardRef.current === null) return;
+    
+    setIsDownloading(true);
+    try {
+      const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 });
+      const link = document.createElement('a');
+      link.download = `typemaster-result-${wpm}wpm.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Failed to generate image', err);
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [wpm]);
+
+  // --- 2. LOGIC (Safe to put here) ---
   const isHighScore = resultMessage.includes('Smashed');
   const isBaseline = resultMessage.includes('Baseline');
   
@@ -39,34 +68,24 @@ const ResultsModal = ({ status, wpm, accuracy, correctChars, errorChars, history
     buttonText = "Beat This Score";
   }
 
-  const handleShare = () => {
-    const text = `🚀 I just hit ${wpm} WPM with ${accuracy}% accuracy on the FM30 Typing Speed Test!\n\nCan you beat my score? Try it here: https://typing-speed-test-blik.vercel.app/`;
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const statBoxClass = "bg-[var(--bg-secondary)] border border-[var(--text-secondary)]/20 rounded-xl p-5 w-full md:w-48 flex flex-col items-start gap-1 shadow-sm";
 
+  // --- 3. CONDITIONAL RETURN (Must be AFTER hooks) ---
+  if (status !== 'finished') return null;
+
+  // --- 4. RENDER ---
   return (
-    // ✅ FIX 1: Outer Container handles Scrolling and Z-Index
-    // We use 'overflow-y-auto' here so the whole page scrolls if needed
     <div className="fixed inset-0 z-50 overflow-y-auto bg-[var(--bg-primary)] animate-in fade-in duration-200">
       
-      {/* Background Decor (Fixed so they don't scroll awkwardly) */}
+      {/* Background Decor */}
       <div className="fixed inset-0 pointer-events-none">
         <img src={star1} alt="" className="absolute top-32 left-8 w-8 h-8 opacity-40 animate-pulse" style={{ animationDuration: '3s' }} />
         <img src={star2} alt="" className="absolute bottom-40 right-8 w-10 h-10 opacity-40 animate-pulse" style={{ animationDuration: '4s' }} />
         {isHighScore && <img src={confettiPattern} alt="Confetti" className="absolute bottom-0 inset-x-0 w-full object-cover opacity-60 pointer-events-none animate-in slide-in-from-bottom-10 duration-700" />}
       </div>
 
-      {/* ✅ FIX 2: Layout Wrapper
-          'min-h-full' ensures that if content is small, it centers vertically.
-          If content is large, it stretches naturally so you can scroll to the top/bottom.
-      */}
       <div className="flex min-h-full items-center justify-center p-4 text-center">
         
-        {/* Content Container */}
         <div className="relative w-full max-w-sm md:max-w-4xl flex flex-col items-center py-10 z-10">
           
           <div className="mb-6">
@@ -79,6 +98,7 @@ const ResultsModal = ({ status, wpm, accuracy, correctChars, errorChars, history
           <h2 className="text-3xl font-bold text-[var(--text-primary)] mb-3">{resultMessage}</h2>
           <p className="text-[var(--text-secondary)] text-sm md:text-base leading-relaxed mb-8 px-4">{subtitle}</p>
           
+          {/* Stats Grid */}
           <div className="w-full flex flex-col md:flex-row justify-center gap-4 mb-8">
             <div className={statBoxClass}>
               <span className="text-[var(--text-secondary)] text-sm font-medium">WPM:</span>
@@ -103,17 +123,47 @@ const ResultsModal = ({ status, wpm, accuracy, correctChars, errorChars, history
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+            {/* Restart Button */}
             <button onClick={onRestart} className="px-8 py-3.5 bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold text-base rounded-xl hover:opacity-90 transition-transform active:scale-95 flex items-center justify-center gap-2 shadow-lg">
               <span>{buttonText}</span>
-              <img src={restartIcon} alt="" className="w-4 h-4 invert" />
+              <img src={restartIcon} alt="" className="w-4 h-4 invert dark:invert-0" style={{ filter: 'var(--icon-filter)' }} />
             </button>
             
+            {/* Share/Copy Button */}
             <button onClick={handleShare} className="px-8 py-3.5 bg-transparent border border-[var(--text-secondary)]/50 text-[var(--text-primary)] font-bold text-base rounded-xl hover:bg-[var(--text-secondary)]/10 transition-all active:scale-95">
-              {copied ? "Copied!" : "Share Result"}
+              {copied ? "Copied!" : "Share result"}
+            </button>
+
+            {/* Download Image Button */}
+            <button 
+              onClick={handleDownload} 
+              disabled={isDownloading} 
+              className="px-8 py-3.5 bg-[var(--accent)] text-[var(--bg-primary)] font-bold text-base rounded-xl hover:opacity-90 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isDownloading ? (
+                 <span className="animate-pulse">Saving...</span>
+              ) : (
+                <>
+                  <span>Image</span>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </>
+              )}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Hidden Card for Screenshot Generation */}
+      <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none">
+        <ResultCard 
+          ref={cardRef} 
+          wpm={wpm} 
+          accuracy={accuracy} 
+          mode="Typing Speed Test"
+          date={new Date().toISOString()} 
+        />
+      </div>
+
     </div>
   );
 };

@@ -55,7 +55,7 @@ function App() {
   useEffect(() => {
     setText(getNewContent());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contentType, codeLanguage]); // Also listen for codeLanguage changes
+  }, [contentType, codeLanguage]);
 
   const handleGameFinish = useCallback((finalWpm: number, finalAccuracy: number, historyData: WpmPoint[]) => {
     setGraphData(historyData);
@@ -117,7 +117,6 @@ function App() {
     resetEngine();
   }, [timeOption, mode, contentType, codeLanguage, resetEngine]);
 
-  // Handlers
   const handleDifficultyChange = useCallback((newDifficulty: Difficulty) => {
     setDifficulty(newDifficulty);
     if (contentType === 'text') {
@@ -128,7 +127,6 @@ function App() {
 
   const handleLanguageChange = useCallback((newLang: CodeLanguage) => {
     setCodeLanguage(newLang);
-    // Text update is handled by the useEffect above
     resetEngine();
   }, [setCodeLanguage, resetEngine]);
 
@@ -138,7 +136,8 @@ function App() {
   }, [getNewContent, resetEngine]);
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col items-center pt-8 md:pt-20 px-4 sm:px-6 font-sans selection:bg-[var(--accent)]/30 touch-manipulation transition-colors duration-300" onClick={() => inputRef.current?.focus()}>
+    // FIX 1: Removed onClick from this main container
+    <div className="min-h-screen w-full overflow-x-hidden bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col items-center pt-8 md:pt-20 px-4 sm:px-6 font-sans selection:bg-[var(--accent)]/30 touch-manipulation transition-colors duration-300">
       
       {status !== 'finished' && (
         <div className="relative z-50 w-full max-w-5xl flex justify-center">
@@ -156,7 +155,6 @@ function App() {
         </div>
         <div className="w-full md:w-auto flex justify-end">
           <Controls 
-            // Normal Props
             difficulty={difficulty} 
             setDifficulty={handleDifficultyChange} 
             mode={mode} 
@@ -164,7 +162,6 @@ function App() {
             timeOption={timeOption} 
             setTimeOption={setTimeOption} 
             status={status}
-            // Code Props
             contentType={contentType}
             codeLanguage={codeLanguage}
             setCodeLanguage={handleLanguageChange}
@@ -172,7 +169,11 @@ function App() {
         </div>
       </div>
 
-      <div className="relative w-full max-w-5xl outline-none border-y border-[var(--text-secondary)]/20 py-10 md:py-14 min-h-62.5 mb-32 md:mb-8">
+      {/* FIX 2: Added onClick HERE so keyboard only opens when tapping the game box */}
+      <div 
+        onClick={() => inputRef.current?.focus()} 
+        className="relative w-full max-w-5xl outline-none border-y border-[var(--text-secondary)]/20 py-10 md:py-14 min-h-62.5 mb-32 md:mb-8"
+      >
         <div className={`transition-all duration-500 ease-out ${status === 'idle' ? 'blur-sm opacity-40 scale-[0.98]' : 'blur-0 opacity-100 scale-100'}`}>
           <TypingArea text={text} typed={typed} />
         </div>
