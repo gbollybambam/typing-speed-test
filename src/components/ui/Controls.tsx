@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, memo } from 'react';
 import { type Difficulty } from '../../utils/textGenerator';
+import { type CodeLanguage } from '../../utils/codeGenerator'; // Import type
 import { type Mode } from '../../hooks/useTypingEngine';
 import arrowIcon from '../../assets/images/icon-down-arrow.svg'; 
 
@@ -37,7 +38,6 @@ const CustomSelect = ({ value, options, onChange, isOpen, onToggle, onClose, dis
     <div ref={containerRef} className="relative w-1/2 md:hidden">
       <button 
         onClick={(e) => { e.stopPropagation(); if (!disabled) onToggle(); }} 
-        // UPDATED: Semantic colors for mobile dropdown trigger
         className={`relative w-full flex items-center justify-between bg-[var(--bg-secondary)] border border-[var(--text-secondary)]/20 text-[var(--text-primary)] text-sm font-medium py-3 pl-4 pr-10 rounded-xl transition-colors ${isOpen ? 'border-[var(--text-secondary)]/50' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-[var(--text-secondary)]/50'}`}
         disabled={disabled}
         type="button"
@@ -47,14 +47,12 @@ const CustomSelect = ({ value, options, onChange, isOpen, onToggle, onClose, dis
       </button>
 
       {isOpen && (
-        // UPDATED: Semantic colors for mobile dropdown menu
         <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-[var(--bg-secondary)] border border-[var(--text-secondary)]/20 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top p-2">
           <ul>
             {options.map((option) => (
               <li key={option.value}>
                 <button
                   onClick={(e) => { e.stopPropagation(); onChange(option.value); onClose(); }}
-                  // UPDATED: Semantic colors for dropdown items
                   className={`w-full text-left flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors ${option.value === value ? 'text-[var(--text-primary)] bg-[var(--text-secondary)]/10' : 'text-[var(--text-secondary)] hover:bg-[var(--text-secondary)]/5 hover:text-[var(--text-primary)]'}`}
                   type="button"
                 >
@@ -75,6 +73,11 @@ const CustomSelect = ({ value, options, onChange, isOpen, onToggle, onClose, dis
 interface ControlsProps {
   difficulty: Difficulty;
   setDifficulty: (diff: Difficulty) => void;
+  // New Props for Code Mode
+  contentType: 'text' | 'code';
+  codeLanguage: CodeLanguage;
+  setCodeLanguage: (lang: CodeLanguage) => void;
+  
   mode: Mode;
   setMode: (mode: Mode) => void;
   timeOption: number;
@@ -82,9 +85,15 @@ interface ControlsProps {
   status: 'idle' | 'running' | 'finished';
 }
 
-const Controls = ({ difficulty, setDifficulty, mode, setMode, timeOption, setTimeOption, status }: ControlsProps) => {
+const Controls = ({ 
+  difficulty, setDifficulty, 
+  contentType, codeLanguage, setCodeLanguage, // Destructure new props
+  mode, setMode, 
+  timeOption, setTimeOption, 
+  status 
+}: ControlsProps) => {
   const isDisabled = status === 'running';
-  const [openDropdown, setOpenDropdown] = useState<'difficulty' | 'mode' | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<'left' | 'right' | null>(null);
 
   const currentConfigValue = mode === 'passage' ? 'passage' : `timed-${timeOption}`;
   
@@ -97,11 +106,31 @@ const Controls = ({ difficulty, setDifficulty, mode, setMode, timeOption, setTim
     }
   };
 
-  const difficultyOptions: SelectOption[] = [
-    { label: 'Easy', value: 'easy' },
-    { label: 'Medium', value: 'medium' },
-    { label: 'Hard', value: 'hard' },
-  ];
+  // --- DYNAMIC OPTIONS ---
+  // If in Code Mode, Left Dropdown/Buttons show Languages
+  // If in Text Mode, Left Dropdown/Buttons show Difficulty
+  const leftOptions: SelectOption[] = contentType === 'code' 
+    ? [
+        { label: 'JavaScript', value: 'javascript' },
+        { label: 'Python', value: 'python' },
+        { label: 'CSS', value: 'css' },
+      ]
+    : [
+        { label: 'Easy', value: 'easy' },
+        { label: 'Medium', value: 'medium' },
+        { label: 'Hard', value: 'hard' },
+      ];
+
+  const handleLeftChange = (val: string) => {
+    if (contentType === 'code') {
+      setCodeLanguage(val as CodeLanguage);
+    } else {
+      setDifficulty(val as Difficulty);
+    }
+  };
+
+  const currentLeftValue = contentType === 'code' ? codeLanguage : difficulty;
+  const leftLabel = contentType === 'code' ? "Language:" : "Difficulty:";
 
   const modeOptions: SelectOption[] = [
     { label: 'Timed (15s)', value: 'timed-15' },
@@ -114,15 +143,12 @@ const Controls = ({ difficulty, setDifficulty, mode, setMode, timeOption, setTim
   const renderDesktopGroup = (label: string, items: { label: string, value: string, isActive: boolean, onClick: () => void }[]) => (
     <div className="flex items-center gap-2">
       <span className="text-[var(--text-secondary)] font-medium text-xs hidden xl:block whitespace-nowrap">{label}</span>
-      
-      {/* UPDATED: Container uses semantic variables */}
       <div className="flex items-center bg-[var(--bg-secondary)] p-1 rounded-lg border border-[var(--text-secondary)]/20 shadow-sm">
         {items.map((item) => (
           <button
             key={item.value}
             onClick={item.onClick}
             disabled={isDisabled}
-            // UPDATED: Buttons use accent color for active state, text-secondary for inactive
             className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all border whitespace-nowrap ${
               item.isActive 
                 ? 'bg-[var(--accent)]/10 border-[var(--accent)] text-[var(--accent)] shadow-sm font-bold' 
@@ -138,17 +164,38 @@ const Controls = ({ difficulty, setDifficulty, mode, setMode, timeOption, setTim
 
   return (
     <div onClick={(e) => e.stopPropagation()} className="flex w-full md:w-auto z-30 relative justify-end">
+      
+      {/* MOBILE VIEW */}
       <div className="flex gap-3 w-full md:hidden">
-        <CustomSelect value={difficulty} options={difficultyOptions} onChange={(val) => setDifficulty(val as Difficulty)} isOpen={openDropdown === 'difficulty'} onToggle={() => setOpenDropdown(openDropdown === 'difficulty' ? null : 'difficulty')} onClose={() => setOpenDropdown(null)} disabled={isDisabled} />
-        <CustomSelect value={currentConfigValue} options={modeOptions} onChange={handleConfigChange} isOpen={openDropdown === 'mode'} onToggle={() => setOpenDropdown(openDropdown === 'mode' ? null : 'mode')} onClose={() => setOpenDropdown(null)} disabled={isDisabled} />
+        <CustomSelect 
+          value={currentLeftValue} 
+          options={leftOptions} 
+          onChange={handleLeftChange} 
+          isOpen={openDropdown === 'left'} 
+          onToggle={() => setOpenDropdown(openDropdown === 'left' ? null : 'left')} 
+          onClose={() => setOpenDropdown(null)} 
+          disabled={isDisabled} 
+        />
+        <CustomSelect 
+          value={currentConfigValue} 
+          options={modeOptions} 
+          onChange={handleConfigChange} 
+          isOpen={openDropdown === 'right'} 
+          onToggle={() => setOpenDropdown(openDropdown === 'right' ? null : 'right')} 
+          onClose={() => setOpenDropdown(null)} 
+          disabled={isDisabled} 
+        />
       </div>
 
+      {/* DESKTOP VIEW */}
       <div className="hidden md:flex items-center gap-4">
-        {renderDesktopGroup("Difficulty:", [
-          { label: 'Easy', value: 'easy', isActive: difficulty === 'easy', onClick: () => setDifficulty('easy') },
-          { label: 'Medium', value: 'medium', isActive: difficulty === 'medium', onClick: () => setDifficulty('medium') },
-          { label: 'Hard', value: 'hard', isActive: difficulty === 'hard', onClick: () => setDifficulty('hard') },
-        ])}
+        {renderDesktopGroup(leftLabel, leftOptions.map(opt => ({
+          label: opt.label,
+          value: opt.value,
+          isActive: currentLeftValue === opt.value,
+          onClick: () => handleLeftChange(opt.value)
+        })))}
+
         {renderDesktopGroup("Mode:", [
           { label: '15s', value: 'timed-15', isActive: mode === 'timed' && timeOption === 15, onClick: () => handleConfigChange('timed-15') },
           { label: '30s', value: 'timed-30', isActive: mode === 'timed' && timeOption === 30, onClick: () => handleConfigChange('timed-30') },

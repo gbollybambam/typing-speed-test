@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { getRandomPassage, type Difficulty } from './utils/textGenerator';
+import { getRandomCodeSnippet, type CodeLanguage } from './utils/codeGenerator';
 import useTypingEngine, { type Mode, type WpmPoint } from './hooks/useTypingEngine';
 import useLocalStorage from './hooks/useLocalStorage';
 import useSoundEngine from './hooks/useSoundEngine';
@@ -11,44 +12,58 @@ import StatsDisplay from './components/typing/StatsDisplay';
 import TypingArea from './components/typing/TypingArea';
 import ResultsModal from './components/ui/ResultsModal';
 import HistoryModal, { type HistoryItem } from './components/ui/HistoryModal';
+import SettingsModal from './components/ui/SettingsModal';
 import restartIcon from './assets/images/icon-restart.svg';
 
 function App() {
   const [timeOption, setTimeOption] = useState(60);
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [mode, setMode] = useState<Mode>('timed');
+  
+  // Settings
+  const [contentType, setContentType] = useLocalStorage<'text' | 'code'>('typing-speed-content-type', 'text');
+  const [codeLanguage, setCodeLanguage] = useLocalStorage<CodeLanguage>('typing-speed-code-lang', 'javascript');
+  const [theme, setTheme] = useLocalStorage<'dark' | 'light'>('typing-speed-theme', 'dark');
 
-  const [text, setText] = useState(() => getRandomPassage('medium').text);
+  // Helper to generate content
+  const getNewContent = useCallback(() => {
+    if (contentType === 'code') {
+      return getRandomCodeSnippet(codeLanguage);
+    }
+    return getRandomPassage(difficulty).text;
+  }, [contentType, difficulty, codeLanguage]);
+
+  // Init text
+  const [text, setText] = useState(() => getNewContent());
+
+  // Stats & History
   const [highScore, setHighScore] = useLocalStorage<number>('typing-speed-high-score', 0);
   const [history, setHistory] = useLocalStorage<HistoryItem[]>('typing-speed-history', []);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [resultMessage, setResultMessage] = useState('');
-  
-  // Theme State (Default to 'dark')
-  const [theme, setTheme] = useLocalStorage<'dark' | 'light'>('typing-speed-theme', 'dark');
-  
-  // Graph Data State
   const [graphData, setGraphData] = useState<WpmPoint[]>([]);
+  
+  // Modals
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [resultMessage, setResultMessage] = useState('');
 
-  // Toggle Theme Function
-  const toggleTheme = useCallback(() => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  }, [setTheme]);
-
-  // Apply Theme to Body
+  // Apply Theme
   useEffect(() => {
     document.body.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Finish Handler
+  // Update text when settings change
+  useEffect(() => {
+    setText(getNewContent());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentType, codeLanguage]); // Also listen for codeLanguage changes
+
   const handleGameFinish = useCallback((finalWpm: number, finalAccuracy: number, historyData: WpmPoint[]) => {
     setGraphData(historyData);
-
     const newEntry: HistoryItem = {
       wpm: finalWpm,
       accuracy: finalAccuracy,
       date: new Date().toISOString(),
-      mode: mode === 'timed' ? `timed-${timeOption}` : 'passage'
+      mode: contentType === 'code' ? `Code (${codeLanguage})` : (mode === 'timed' ? `timed-${timeOption}` : 'passage')
     };
     setHistory(prev => [...prev, newEntry]);
 
@@ -61,9 +76,8 @@ function App() {
     } else {
       setResultMessage('Test Complete!');
     }
-  }, [highScore, mode, timeOption, setHistory, setHighScore]);
+  }, [highScore, mode, timeOption, contentType, codeLanguage, setHistory, setHighScore]);
 
-  // Engine Hook
   const { status, timer, typed, wpm, accuracy, startGame, handleInput, resetEngine, errors } = useTypingEngine(
     mode, 
     timeOption, 
@@ -72,8 +86,6 @@ function App() {
   
   const inputRef = useRef<HTMLInputElement>(null);
   const { playClick, playError, playSuccess, toggleMute, isMuted } = useSoundEngine();
-
-  // Sound Effect Logic
   const prevTypedLength = useRef(0);
   const prevErrors = useRef(0);
 
@@ -94,47 +106,46 @@ function App() {
   }, [typed, errors, status, playClick, playError]);
 
   useEffect(() => {
-    if (status === 'finished') {
-      playSuccess();
-    }
+    if (status === 'finished') playSuccess();
   }, [status, playSuccess]);
 
-  // Focus Input on Start
   useEffect(() => {
-    if (status === 'running' && inputRef.current) {
-      inputRef.current.focus();
-    }
+    if (status === 'running' && inputRef.current) inputRef.current.focus();
   }, [status]);
 
   useEffect(() => {
     resetEngine();
-  }, [timeOption, mode, resetEngine]);
+  }, [timeOption, mode, contentType, codeLanguage, resetEngine]);
 
+  // Handlers
   const handleDifficultyChange = useCallback((newDifficulty: Difficulty) => {
     setDifficulty(newDifficulty);
-    setText(getRandomPassage(newDifficulty).text);
+    if (contentType === 'text') {
+      setText(getRandomPassage(newDifficulty).text);
+    }
     resetEngine();
-  }, [resetEngine]);
+  }, [resetEngine, contentType]);
+
+  const handleLanguageChange = useCallback((newLang: CodeLanguage) => {
+    setCodeLanguage(newLang);
+    // Text update is handled by the useEffect above
+    resetEngine();
+  }, [setCodeLanguage, resetEngine]);
 
   const handleRestart = useCallback(() => {
-    setText(getRandomPassage(difficulty).text); 
+    setText(getNewContent());
     resetEngine(); 
-  }, [difficulty, resetEngine]);
+  }, [getNewContent, resetEngine]);
 
   return (
-    // ✅ CHANGED: Uses semantic CSS variables for background and text
-    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col items-center pt-8 md:pt-20 px-4 sm:px-6 font-sans selection:bg-[var(--accent)]/30 touch-manipulation transition-colors duration-300" onClick={() => inputRef.current?.focus()}>
+    <div className="min-h-screen w-full overflow-x-hidden bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col items-center pt-8 md:pt-20 px-4 sm:px-6 font-sans selection:bg-[var(--accent)]/30 touch-manipulation transition-colors duration-300" onClick={() => inputRef.current?.focus()}>
       
-      {/* Header - Now passes theme props */}
       {status !== 'finished' && (
         <div className="relative z-50 w-full max-w-5xl flex justify-center">
           <Header 
             highScore={highScore} 
             onOpenHistory={() => setIsHistoryOpen(true)}
-            isMuted={isMuted}
-            onToggleMute={toggleMute}
-            theme={theme}             // <-- NEW
-            onToggleTheme={toggleTheme} // <-- NEW
+            onOpenSettings={() => setIsSettingsOpen(true)}
           />
         </div>
       )}
@@ -144,7 +155,20 @@ function App() {
           <StatsDisplay wpm={wpm} accuracy={accuracy} timer={timer} mode={mode} />
         </div>
         <div className="w-full md:w-auto flex justify-end">
-          <Controls difficulty={difficulty} setDifficulty={handleDifficultyChange} mode={mode} setMode={setMode} timeOption={timeOption} setTimeOption={setTimeOption} status={status} />
+          <Controls 
+            // Normal Props
+            difficulty={difficulty} 
+            setDifficulty={handleDifficultyChange} 
+            mode={mode} 
+            setMode={setMode} 
+            timeOption={timeOption} 
+            setTimeOption={setTimeOption} 
+            status={status}
+            // Code Props
+            contentType={contentType}
+            codeLanguage={codeLanguage}
+            setCodeLanguage={handleLanguageChange}
+          />
         </div>
       </div>
 
@@ -159,7 +183,7 @@ function App() {
               onClick={(e) => { e.stopPropagation(); startGame(); }} 
               className="px-8 py-4 bg-blue-600 text-white text-lg font-bold rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:bg-blue-500 transition-all active:scale-95"
             >
-              Start Typing Test
+              Start {contentType === 'code' ? 'Code' : 'Typing'} Test
             </button>
             <p className="mt-4 text-[var(--text-secondary)] font-medium text-lg sm:text-base animate-pulse">Or click the text and start typing</p>
           </div>
@@ -174,23 +198,25 @@ function App() {
              className="px-6 py-3.5 bg-[var(--bg-secondary)] text-[var(--text-primary)] font-bold text-base rounded-xl hover:bg-[var(--text-secondary)]/10 transition-all border border-[var(--text-secondary)]/30 shadow-2xl flex items-center gap-3 active:scale-95"
            >
              <span>Restart Test</span>
-             <img src={restartIcon} alt="Restart" className="w-4 h-4 opacity-60 invert-[.5]" />
+             <img src={restartIcon} alt="Restart" className="w-4 h-4 opacity-60 invert dark:invert-0" style={{ filter: 'var(--icon-filter)' }} />
            </button>
         </div>
       )}
 
-      <ResultsModal 
-        status={status} 
-        wpm={wpm} 
-        accuracy={accuracy} 
-        correctChars={typed.length - errors} 
-        errorChars={errors} 
-        history={graphData} 
-        resultMessage={resultMessage} 
-        onRestart={handleRestart} 
-      />
+      <ResultsModal status={status} wpm={wpm} accuracy={accuracy} correctChars={typed.length - errors} errorChars={errors} history={graphData} resultMessage={resultMessage} onRestart={handleRestart} />
       
       <HistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} history={history} />
+      
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)}
+        theme={theme}
+        setTheme={setTheme}
+        isMuted={isMuted}
+        toggleMute={toggleMute}
+        contentType={contentType}
+        setContentType={setContentType}
+      />
 
     </div>
   );
