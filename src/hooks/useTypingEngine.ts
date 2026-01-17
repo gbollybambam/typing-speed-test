@@ -17,10 +17,9 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
   const [totalKeystrokes, setTotalKeystrokes] = useState(0);
   const [wpmHistory, setWpmHistory] = useState<WpmPoint[]>([]);
 
-  // ✅ FIX: Use a Ref to track typed text without re-triggering the timer
+  // Refs to track latest state without triggering re-renders
   const typedRef = useRef(typed);
   
-  // Keep the ref synced with state
   useEffect(() => {
     typedRef.current = typed;
   }, [typed]);
@@ -39,7 +38,7 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
     setTotalKeystrokes(0);
     setWpmHistory([]);
     hasFinished.current = false;
-    typedRef.current = ''; // Reset ref immediately
+    typedRef.current = '';
   }, [getInitialTimer]);
 
   const stopGame = useCallback(() => {
@@ -69,13 +68,19 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
     typedRef.current = '';
   }, [getInitialTimer]);
 
-  // ✅ FIXED TIMER LOGIC
+  // ✅ FIX PART 1: Keep a Ref to the latest stopGame function
+  const stopGameRef = useRef(stopGame);
+  useEffect(() => {
+    stopGameRef.current = stopGame;
+  }, [stopGame]);
+
+  // ✅ FIX PART 2: Timer Logic with ZERO dependencies that change while typing
   useEffect(() => {
     if (status !== 'running') return;
 
     const intervalId = setInterval(() => {
       setTimer((prevTimer) => {
-        // 1. Record WPM for this second using the REF (not state)
+        // Calculate WPM for graph
         let currentElapsed = 0;
         if (mode === 'timed') {
             currentElapsed = timeOption - prevTimer;
@@ -84,16 +89,16 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
         }
 
         if (currentElapsed > 0) {
-            // Use typedRef.current here to avoid restarting the interval
             const currentWpm = calculateWPM(typedRef.current.length, currentElapsed);
             setWpmHistory(prev => [...prev, { time: currentElapsed, wpm: currentWpm }]);
         }
 
-        // 2. Update Timer
+        // Handle Timer Count
         if (mode === 'timed') {
           if (prevTimer <= 1) {
             clearInterval(intervalId);
-            stopGame();
+            // Call the Ref, NOT the function directly
+            stopGameRef.current(); 
             return 0;
           }
           return prevTimer - 1;
@@ -103,9 +108,10 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
     }, 1000);
 
     return () => clearInterval(intervalId);
-  // ❌ REMOVED 'typed.length' from dependencies. 
-  // This ensures the timer runs smoothly regardless of how fast you type.
-  }, [status, mode, stopGame, timeOption]); 
+    
+    // 🚨 CRITICAL: Do NOT include 'stopGame' here. Only 'status' and 'mode'.
+    // This ensures the timer NEVER stops even if you type 100 words per second.
+  }, [status, mode, timeOption]); 
 
   const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>, targetText: string) => {
     if (status === 'finished') return;
