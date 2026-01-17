@@ -4,7 +4,6 @@ import { calculateAccuracy, calculateWPM } from '../utils/calculateStats';
 export type GameStatus = 'idle' | 'running' | 'finished';
 export type Mode = 'timed' | 'passage';
 
-// Define the shape of our graph data
 export interface WpmPoint {
   time: number;
   wpm: number;
@@ -16,9 +15,15 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
   const [typed, setTyped] = useState<string>('');
   const [errors, setErrors] = useState(0);
   const [totalKeystrokes, setTotalKeystrokes] = useState(0);
-  
-  // NEW: Store WPM every second for the graph
   const [wpmHistory, setWpmHistory] = useState<WpmPoint[]>([]);
+
+  // ✅ FIX: Use a Ref to track typed text without re-triggering the timer
+  const typedRef = useRef(typed);
+  
+  // Keep the ref synced with state
+  useEffect(() => {
+    typedRef.current = typed;
+  }, [typed]);
 
   const hasFinished = useRef(false);
 
@@ -32,8 +37,9 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
     setTyped('');
     setErrors(0);
     setTotalKeystrokes(0);
-    setWpmHistory([]); // Reset history
+    setWpmHistory([]);
     hasFinished.current = false;
+    typedRef.current = ''; // Reset ref immediately
   }, [getInitialTimer]);
 
   const stopGame = useCallback(() => {
@@ -47,7 +53,6 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
         const finalAccuracy = calculateAccuracy(totalKeystrokes, errors);
 
         if (onFinish) {
-            // Pass the captured history to the finish handler
             onFinish(finalWpm, finalAccuracy, wpmHistory);
         }
     }
@@ -61,16 +66,16 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
     setTotalKeystrokes(0);
     setWpmHistory([]);
     hasFinished.current = false;
+    typedRef.current = '';
   }, [getInitialTimer]);
 
-  // Timer & Recorder Logic
+  // ✅ FIXED TIMER LOGIC
   useEffect(() => {
     if (status !== 'running') return;
 
     const intervalId = setInterval(() => {
       setTimer((prevTimer) => {
-        // 1. Record WPM for this second
-        // We calculate "current" elapsed time to get the WPM *right now*
+        // 1. Record WPM for this second using the REF (not state)
         let currentElapsed = 0;
         if (mode === 'timed') {
             currentElapsed = timeOption - prevTimer;
@@ -78,9 +83,9 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
             currentElapsed = prevTimer;
         }
 
-        // Avoid division by zero at the very start
         if (currentElapsed > 0) {
-            const currentWpm = calculateWPM(typed.length, currentElapsed);
+            // Use typedRef.current here to avoid restarting the interval
+            const currentWpm = calculateWPM(typedRef.current.length, currentElapsed);
             setWpmHistory(prev => [...prev, { time: currentElapsed, wpm: currentWpm }]);
         }
 
@@ -98,7 +103,9 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [status, mode, stopGame, typed.length, timeOption]); // Added dependencies to capture current typed length
+  // ❌ REMOVED 'typed.length' from dependencies. 
+  // This ensures the timer runs smoothly regardless of how fast you type.
+  }, [status, mode, stopGame, timeOption]); 
 
   const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>, targetText: string) => {
     if (status === 'finished') return;
