@@ -53,6 +53,7 @@ I separated logic from UI using a custom `useTypingEngine` hook. This handles:
 
 ### 2. Theming with Semantic Variables
 Instead of hardcoding colors (e.g., `bg-neutral-900`), I architected a **Semantic Variable System** in CSS:
+
 ```css
 :root {
   --bg-primary: hsl(0, 0%, 7%);
@@ -64,53 +65,43 @@ Instead of hardcoding colors (e.g., `bg-neutral-900`), I architected a **Semanti
   --text-primary: hsl(0, 0%, 7%);
   --accent: hsl(49, 100%, 40%);
 }
+```
 
----
+This allows the entire app to switch themes instantly without a single component re-render, ensuring 60fps performance even during transitions.
 
 ### 3. Generating Result Images
 One of the hardest challenges was creating the "Download Image" feature.
-
-Problem: I couldn't just take a screenshot of the modal because it has buttons and scrollbars.
-
-Solution: I created a hidden component <ResultCard /> that renders off-screen. When the user clicks "Download", I use html-to-image to target that specific hidden node, convert it to a Blob, and trigger a browser download. This ensures the shared image is always pixel-perfect, regardless of the user's screen size.
+* **Problem:** I couldn't just take a screenshot of the modal because it has buttons and scrollbars.
+* **Solution:** I created a hidden component `<ResultCard />` that renders off-screen. When the user clicks "Download", I use `html-to-image` to target that specific hidden node, convert it to a Blob, and trigger a browser download. This ensures the shared image is always pixel-perfect, regardless of the user's screen size.
 
 ### 4. Solving the "Rules of Hooks"
-During development, I encountered a critical React error: "Rendered more hooks than during the previous render."
-
-Cause: I had a conditional return if (status !== 'finished') return null; placed before my useCallback hooks.
-
-Fix: I learned that all hooks must run unconditionally. I moved all logic and hooks to the top of the component and placed the conditional return statement at the very bottom, just before the JSX render.
+During development, I encountered a critical React error: *"Rendered more hooks than during the previous render."*
+* **Cause:** I had a conditional return `if (status !== 'finished') return null;` placed *before* my `useCallback` hooks.
+* **Fix:** I learned that **all hooks must run unconditionally**. I moved all logic and hooks to the top of the component and placed the conditional return statement at the very bottom, just before the JSX render.
 
 ### 5. Mobile-First History Drawer
 For the history feature, a standard modal felt cramped on mobile.
-
-Design Decision: I implemented a Side Drawer pattern. On mobile, it slides in from the right, taking up 100% of the height, making it easy to scroll through history with a thumb. On desktop, it behaves like a sleek sidebar.
+* **Design Decision:** I implemented a **Side Drawer** pattern. On mobile, it slides in from the right, taking up 100% of the height, making it easy to scroll through history with a thumb. On desktop, it behaves like a sleek sidebar.
 
 ---
 
 ## 📚 What I Learned
 
-Coming from a Pure Mathematics background, I enjoyed the logic behind the WPM calculation. However, this project pushed me to master Browser APIs:
+Coming from a **Pure Mathematics** background, I enjoyed the logic behind the WPM calculation. However, this project pushed me to master **Browser APIs**:
+1.  **AudioContext:** Managing low-latency sound playback.
+2.  **Clipboard API:** Writing text to the user's clipboard for sharing.
+3.  **Canvas/Blob API:** Converting DOM nodes into PNG images.
 
-AudioContext: Managing low-latency sound playback.
-
-Clipboard API: Writing text to the user's clipboard for sharing.
-
-Canvas/Blob API: Converting DOM nodes into PNG images.
-
-It also taught me the importance of Layout Stability. Adding the Light Mode initially broke some contrast ratios, forcing me to audit every single color usage and standardize them into my index.css variables.
+It also taught me the importance of **Layout Stability**. Adding the Light Mode initially broke some contrast ratios, forcing me to audit every single color usage and standardize them into my `index.css` variables.
 
 ---
 
 ## 🔮 Continued Development
 
 In the future, I plan to:
-
-Backend Integration: Connect to a Django/PostgreSQL backend to save user history permanently.
-
-Global Leaderboard: Allow users to compete for the top spot on a daily/weekly basis.
-
-Multiplayer: Real-time 1v1 typing races using WebSockets.
+1.  **Backend Integration:** Connect to a Django/PostgreSQL backend to save user history permanently.
+2.  **Global Leaderboard:** Allow users to compete for the top spot on a daily/weekly basis.
+3.  **Multiplayer:** Real-time 1v1 typing races using WebSockets.
 
 ---
 
