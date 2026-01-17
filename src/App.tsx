@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 // FIX: Ensure this matches your renamed file 'textGenerator.ts' (Capital G)
-import { getRandomPassage, type Difficulty } from './utils/textgenerator';
+import { getRandomPassage, type Difficulty } from './utils/temp';
 import useTypingEngine, { type Mode } from './hooks/useTypingEngine';
 import useLocalStorage from './hooks/useLocalStorage';
 import useSoundEngine from './hooks/useSoundEngine';
