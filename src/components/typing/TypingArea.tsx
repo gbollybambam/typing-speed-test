@@ -1,7 +1,7 @@
 import { memo, useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// --- 1. The Liquid Caret Component ---
+// --- 1. The Refined Liquid Caret ---
 const Caret = ({ top, left, height }: { top: number; left: number; height: number }) => {
   return (
     <motion.div
@@ -9,17 +9,20 @@ const Caret = ({ top, left, height }: { top: number; left: number; height: numbe
       animate={{ top, left, height }}
       transition={{ 
         type: "spring", 
-        stiffness: 400, 
-        damping: 28,    
-        mass: 0.5       
+        stiffness: 450, // Slightly snappier
+        damping: 30,    
+        mass: 0.4       
       }}
-      className="absolute w-1 bg-yellow-400 rounded-full z-10 shadow-[0_0_10px_2px_rgba(250,204,21,0.5)]"
+      // Updates:
+      // 1. w-0.5 (2px) instead of w-1 (4px) -> cleaner line on mobile
+      // 2. animate-pulse -> helps you find it if you get lost
+      className="absolute w-0.5 md:w-1 bg-yellow-400 rounded-full z-10 shadow-[0_0_8px_1px_rgba(250,204,21,0.6)] animate-pulse"
       style={{ pointerEvents: 'none' }} 
     />
   );
 };
 
-// --- 2. The Single Character Component ---
+// --- 2. The Character Component ---
 const Character = memo(({ 
   char, 
   status, 
@@ -31,7 +34,6 @@ const Character = memo(({
 }) => {
   const charRef = useRef<HTMLSpanElement>(null);
 
-  // Auto-scroll logic
   useEffect(() => {
     if (isActive && charRef.current) {
       charRef.current.scrollIntoView({
@@ -42,9 +44,9 @@ const Character = memo(({
     }
   }, [isActive]);
 
-  let classes = "relative font-mono text-2xl md:text-3xl lg:text-4xl leading-relaxed md:leading-loose transition-colors duration-200 ";
+  // Removed 'leading' classes here to let the parent control spacing more predictably
+  let classes = "relative font-mono text-2xl md:text-3xl lg:text-4xl transition-colors duration-200 ";
 
-  // ✅ FIX: Restored the Green color for correct characters
   if (status === 'correct') {
     classes += "text-green-500"; 
   } else if (status === 'error') {
@@ -56,8 +58,10 @@ const Character = memo(({
   return (
     <span ref={charRef} className={classes}>
       {char}
-      {/* Invisible Marker for Caret Position */}
-      {isActive && <span id="active-caret-marker" className="absolute left-0 top-1 bottom-1 w-full -z-10 opacity-0" />}
+      {/* The Marker: We place this explicitly to help us calculate position.
+         We define height here to ensure the caret matches the FONT size, not the bounding box.
+      */}
+      {isActive && <span id="active-caret-marker" className="absolute left-0 top-0 bottom-0 w-full -z-10 opacity-0" />}
     </span>
   );
 }, (prev, next) => {
@@ -72,7 +76,6 @@ interface TypingAreaProps {
 
 const TypingArea = ({ text, typed }: TypingAreaProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  
   const [caretPos, setCaretPos] = useState({ top: 0, left: 0, height: 0 });
   const [showCaret, setShowCaret] = useState(false);
 
@@ -85,10 +88,21 @@ const TypingArea = ({ text, typed }: TypingAreaProps) => {
         const markerRect = marker.getBoundingClientRect();
         const containerRect = container.getBoundingClientRect();
 
+        // MATH FIX: Clean up the geometry
+        // 1. Height: Scale it to 75% of the line height so it doesn't touch lines above/below
+        const refinedHeight = markerRect.height * 0.75;
+        
+        // 2. Top: Center it vertically relative to the line
+        const offsetY = (markerRect.height - refinedHeight) / 2;
+        
+        // 3. Left: No negative offset (-2px) on mobile. Stick to the edge.
+        // We use a tiny -1px just to overlap the very edge of the letter's box
+        const refinedLeft = markerRect.left - containerRect.left - 1;
+
         setCaretPos({
-          top: markerRect.top - containerRect.top,
-          left: markerRect.left - containerRect.left - 2, 
-          height: markerRect.height
+          top: (markerRect.top - containerRect.top) + offsetY,
+          left: refinedLeft,
+          height: refinedHeight
         });
         setShowCaret(true);
       } else {
@@ -104,7 +118,7 @@ const TypingArea = ({ text, typed }: TypingAreaProps) => {
   return (
     <div className="w-full px-1 relative">
       
-      {/* The Floating Caret Layer */}
+      {/* Caret Layer */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
         <AnimatePresence>
           {showCaret && (
@@ -117,10 +131,11 @@ const TypingArea = ({ text, typed }: TypingAreaProps) => {
         </AnimatePresence>
       </div>
 
-      {/* The Text Layer */}
+      {/* Text Layer */}
       <div 
         ref={containerRef}
-        className="wrap-break-words select-none pointer-events-none text-left max-h-62.5 overflow-hidden relative p-1"
+        // Added leading-relaxed here to enforce consistent line height for the whole block
+        className="leading-relaxed break-words select-none pointer-events-none text-left max-h-[250px] overflow-hidden relative p-1"
       >
         {text.split('').map((char, index) => {
           const isTyped = index < typed.length;
