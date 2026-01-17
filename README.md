@@ -65,6 +65,8 @@ Instead of hardcoding colors (e.g., `bg-neutral-900`), I architected a **Semanti
   --accent: hsl(49, 100%, 40%);
 }
 
+---
+
 ### 3. Generating Result Images
 One of the hardest challenges was creating the "Download Image" feature.
 
