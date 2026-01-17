@@ -1,56 +1,55 @@
-import { useCallback, useRef, useState } from 'react';
+import { useState, useCallback } from 'react';
+import useSound from 'use-sound';
+
+// Ensure these files exist in your public/sounds folder!
+const SOUND_PATHS = {
+  click: '/sounds/click.wav',
+  error: '/sounds/error.wav',
+  success: '/sounds/success.wav',
+};
 
 export default function useSoundEngine() {
   const [isMuted, setIsMuted] = useState(false);
-  
-  // We use refs to keep the audio objects in memory without re-rendering
-  const clickRef = useRef<HTMLAudioElement | null>(null);
-  const errorRef = useRef<HTMLAudioElement | null>(null);
-  const successRef = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize sounds (Lazy load)
-  const loadSounds = useCallback(() => {
-    if (!clickRef.current) {
-      clickRef.current = new Audio('/sounds/click.wav');
-      clickRef.current.volume = 0.5; // Subtle volume
-    }
-    if (!errorRef.current) {
-      errorRef.current = new Audio('/sounds/error.wav');
-      errorRef.current.volume = 0.4;
-    }
-    if (!successRef.current) {
-      successRef.current = new Audio('/sounds/success.mp3');
-      successRef.current.volume = 0.6;
-    }
-  }, []);
+  // 1. Setup the "Click" (Main typing sound)
+  // 'interrupt: true' allows sounds to overlap (essential for fast typing)
+  const [playClickRaw] = useSound(SOUND_PATHS.click, { 
+    volume: 0.5,
+    interrupt: true 
+  });
+
+  // 2. Setup Error sound (Slightly louder)
+  const [playErrorRaw] = useSound(SOUND_PATHS.error, { 
+    volume: 0.6,
+    interrupt: true 
+  });
+
+  // 3. Setup Success sound
+  const [playSuccessRaw] = useSound(SOUND_PATHS.success, { 
+    volume: 0.7 
+  });
+
+  // --- Wrapper Functions with Logic ---
 
   const playClick = useCallback(() => {
     if (isMuted) return;
-    loadSounds();
-    if (clickRef.current) {
-      // Reset time to 0 to allow rapid fire typing
-      clickRef.current.currentTime = 0;
-      clickRef.current.play().catch(() => {}); // Catch error if user hasn't interacted yet
-    }
-  }, [isMuted, loadSounds]);
+    
+    // THE SECRET SAUCE: Randomize pitch slightly (0.95 to 1.05)
+    // This makes it sound like a real mechanical keyboard, not a robot.
+    const playbackRate = 0.95 + Math.random() * 0.1;
+    
+    playClickRaw({ playbackRate });
+  }, [isMuted, playClickRaw]);
 
   const playError = useCallback(() => {
     if (isMuted) return;
-    loadSounds();
-    if (errorRef.current) {
-      errorRef.current.currentTime = 0;
-      errorRef.current.play().catch(() => {});
-    }
-  }, [isMuted, loadSounds]);
+    playErrorRaw();
+  }, [isMuted, playErrorRaw]);
 
   const playSuccess = useCallback(() => {
     if (isMuted) return;
-    loadSounds();
-    if (successRef.current) {
-      successRef.current.currentTime = 0;
-      successRef.current.play().catch(() => {});
-    }
-  }, [isMuted, loadSounds]);
+    playSuccessRaw();
+  }, [isMuted, playSuccessRaw]);
 
   const toggleMute = useCallback(() => {
     setIsMuted(prev => !prev);
