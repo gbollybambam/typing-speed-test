@@ -1,3 +1,4 @@
+import { memo } from 'react'; // Added memo
 import { type Mode } from '../../hooks/useTypingEngine';
 
 interface StatsDisplayProps {
@@ -16,7 +17,6 @@ const StatsDisplay = ({ wpm, accuracy, timer, mode }: StatsDisplayProps) => {
   };
 
   const labelClasses = "text-neutral-500 text-xs sm:text-sm md:text-lg font-medium mb-1 md:mb-0 md:mr-2 whitespace-nowrap";
-  
   const valueBaseClasses = "text-3xl sm:text-4xl md:text-2xl font-bold";
 
   return (
@@ -48,4 +48,5 @@ const StatsDisplay = ({ wpm, accuracy, timer, mode }: StatsDisplayProps) => {
   );
 };
 
-export default StatsDisplay;
+// Export as Memo
+export default memo(StatsDisplay);

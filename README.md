@@ -6,8 +6,8 @@
 
 ## 🔗 Links
 
--   **Live Site URL:** [Add your Vercel Link Here]
--   **Frontend Mentor Solution:** [Add your FM Solution Link Here]
+-   **Live Site URL:** [https://typing-speed-test-blik.vercel.app/]
+
 
 ## 📝 The Challenge
 

@@ -97,11 +97,11 @@ function App() {
     resetEngine();
   }, [timeOption, mode, resetEngine]);
 
-  const handleDifficultyChange = (newDifficulty: Difficulty) => {
+  const handleDifficultyChange = useCallback((newDifficulty: Difficulty) => {
     setDifficulty(newDifficulty);
     setText(getRandomPassage(newDifficulty).text);
     resetEngine();
-  };
+  }, [resetEngine]);
 
   const handleRestart = useCallback(() => {
     setText(getRandomPassage(difficulty).text); 

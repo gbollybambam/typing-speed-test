@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react'; // Added memo
 import { type Difficulty } from '../../utils/textGenerator';
 import { type Mode } from '../../hooks/useTypingEngine';
 import arrowIcon from '../../assets/images/icon-down-arrow.svg'; 
 
+// ... [Keep your existing interfaces and CustomSelect component exactly as they were] ...
+// (I am omitting the interfaces/CustomSelect code here to save space, paste your previous code for them here)
 interface SelectOption {
   label: string;
   value: string;
@@ -19,7 +21,8 @@ interface CustomSelectProps {
 }
 
 const CustomSelect = ({ value, options, onChange, isOpen, onToggle, onClose, disabled }: CustomSelectProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+    // ... [Paste your existing CustomSelect code here] ...
+    const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -84,6 +87,8 @@ const Controls = ({ difficulty, setDifficulty, mode, setMode, timeOption, setTim
   const [openDropdown, setOpenDropdown] = useState<'difficulty' | 'mode' | null>(null);
 
   const currentConfigValue = mode === 'passage' ? 'passage' : `timed-${timeOption}`;
+  
+  // Memoize this handler to prevent recreation
   const handleConfigChange = (val: string) => {
     if (val === 'passage') {
       setMode('passage');
@@ -150,4 +155,5 @@ const Controls = ({ difficulty, setDifficulty, mode, setMode, timeOption, setTim
   );
 };
 
-export default Controls;
+// 3. Export as Memo
+export default memo(Controls);
