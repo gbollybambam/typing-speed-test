@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { getRandomPassage, type Difficulty } from './utils/textGenerator';
-import useTypingEngine, { type Mode } from './hooks/useTypingEngine';
+import useTypingEngine, { type Mode, type WpmPoint } from './hooks/useTypingEngine';
 import useLocalStorage from './hooks/useLocalStorage';
 import useSoundEngine from './hooks/useSoundEngine';
 
@@ -23,11 +23,16 @@ function App() {
   const [history, setHistory] = useLocalStorage<HistoryItem[]>('typing-speed-history', []);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [resultMessage, setResultMessage] = useState('');
+  
+  // ✅ NEW: State to hold the graph data for the modal
+  const [graphData, setGraphData] = useState<WpmPoint[]>([]);
 
-  // 1. NEW: Create the Finish Handler (Moves logic out of useEffect)
-  // This runs exactly once when the engine says the game is done.
-  const handleGameFinish = useCallback((finalWpm: number, finalAccuracy: number) => {
-    // Save to History
+  // 1. UPDATED: Finish Handler now accepts historyData
+  const handleGameFinish = useCallback((finalWpm: number, finalAccuracy: number, historyData: WpmPoint[]) => {
+    // Save Graph Data to State
+    setGraphData(historyData);
+
+    // Save to History (Local Storage)
     const newEntry: HistoryItem = {
       wpm: finalWpm,
       accuracy: finalAccuracy,
@@ -48,7 +53,7 @@ function App() {
     }
   }, [highScore, mode, timeOption, setHistory, setHighScore]);
 
-  // 2. UPDATED: Pass the callback to the hook as the 3rd argument
+  // 2. Engine Hook
   const { status, timer, typed, wpm, accuracy, startGame, handleInput, resetEngine, errors } = useTypingEngine(
     mode, 
     timeOption, 
@@ -91,9 +96,6 @@ function App() {
     }
   }, [status]);
 
-  // NOTE: The old "Finish Logic" useEffect has been removed from here.
-  // It is now handled by handleGameFinish above.
-
   useEffect(() => {
     resetEngine();
   }, [timeOption, mode, resetEngine]);
@@ -112,7 +114,7 @@ function App() {
   return (
     <div className="min-h-screen bg-neutral-900 text-neutral-200 flex flex-col items-center pt-8 md:pt-20 px-4 sm:px-6 font-sans selection:bg-yellow-400/30 touch-manipulation" onClick={() => inputRef.current?.focus()}>
       
-      {/* Header with History & Sound Buttons */}
+      {/* Header with History & Sound Buttons - Hides when finished */}
       {status !== 'finished' && (
         <div className="relative z-50 w-full max-w-5xl flex justify-center">
           <Header 
@@ -157,10 +159,18 @@ function App() {
         </div>
       )}
 
-      {/* Modals */}
-      <ResultsModal status={status} wpm={wpm} accuracy={accuracy} correctChars={typed.length - errors} errorChars={errors} resultMessage={resultMessage} onRestart={handleRestart} />
+      {/* ✅ UPDATED: Passing history data to the Results Modal */}
+      <ResultsModal 
+        status={status} 
+        wpm={wpm} 
+        accuracy={accuracy} 
+        correctChars={typed.length - errors} 
+        errorChars={errors} 
+        history={graphData} // <--- This connects the graph!
+        resultMessage={resultMessage} 
+        onRestart={handleRestart} 
+      />
       
-      {/* History Modal */}
       <HistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} history={history} />
 
     </div>

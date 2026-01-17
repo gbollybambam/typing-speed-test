@@ -4,14 +4,22 @@ import { calculateAccuracy, calculateWPM } from '../utils/calculateStats';
 export type GameStatus = 'idle' | 'running' | 'finished';
 export type Mode = 'timed' | 'passage';
 
-const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: number, finalAccuracy: number) => void) => {
+// Define the shape of our graph data
+export interface WpmPoint {
+  time: number;
+  wpm: number;
+}
+
+const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: number, finalAccuracy: number, history: WpmPoint[]) => void) => {
   const [status, setStatus] = useState<GameStatus>('idle');
   const [timer, setTimer] = useState(mode === 'timed' ? timeOption : 0);
   const [typed, setTyped] = useState<string>('');
   const [errors, setErrors] = useState(0);
   const [totalKeystrokes, setTotalKeystrokes] = useState(0);
   
-  // Ref to track if we already finished (prevents double calls)
+  // NEW: Store WPM every second for the graph
+  const [wpmHistory, setWpmHistory] = useState<WpmPoint[]>([]);
+
   const hasFinished = useRef(false);
 
   const getInitialTimer = useCallback(() => {
@@ -24,6 +32,7 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
     setTyped('');
     setErrors(0);
     setTotalKeystrokes(0);
+    setWpmHistory([]); // Reset history
     hasFinished.current = false;
   }, [getInitialTimer]);
 
@@ -38,10 +47,11 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
         const finalAccuracy = calculateAccuracy(totalKeystrokes, errors);
 
         if (onFinish) {
-            onFinish(finalWpm, finalAccuracy);
+            // Pass the captured history to the finish handler
+            onFinish(finalWpm, finalAccuracy, wpmHistory);
         }
     }
-  }, [mode, timeOption, timer, typed.length, totalKeystrokes, errors, onFinish]);
+  }, [mode, timeOption, timer, typed.length, totalKeystrokes, errors, onFinish, wpmHistory]);
 
   const resetEngine = useCallback(() => {
     setStatus('idle');
@@ -49,28 +59,46 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
     setTyped('');
     setErrors(0);
     setTotalKeystrokes(0);
+    setWpmHistory([]);
     hasFinished.current = false;
   }, [getInitialTimer]);
 
+  // Timer & Recorder Logic
   useEffect(() => {
     if (status !== 'running') return;
 
     const intervalId = setInterval(() => {
-      setTimer((prev) => {
+      setTimer((prevTimer) => {
+        // 1. Record WPM for this second
+        // We calculate "current" elapsed time to get the WPM *right now*
+        let currentElapsed = 0;
         if (mode === 'timed') {
-          if (prev <= 1) {
+            currentElapsed = timeOption - prevTimer;
+        } else {
+            currentElapsed = prevTimer;
+        }
+
+        // Avoid division by zero at the very start
+        if (currentElapsed > 0) {
+            const currentWpm = calculateWPM(typed.length, currentElapsed);
+            setWpmHistory(prev => [...prev, { time: currentElapsed, wpm: currentWpm }]);
+        }
+
+        // 2. Update Timer
+        if (mode === 'timed') {
+          if (prevTimer <= 1) {
             clearInterval(intervalId);
             stopGame();
             return 0;
           }
-          return prev - 1;
+          return prevTimer - 1;
         } 
-        return prev + 1; 
+        return prevTimer + 1; 
       });
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [status, mode, stopGame]);
+  }, [status, mode, stopGame, typed.length, timeOption]); // Added dependencies to capture current typed length
 
   const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>, targetText: string) => {
     if (status === 'finished') return;
@@ -98,7 +126,7 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
   const accuracy = calculateAccuracy(totalKeystrokes, errors);
   const wpm = calculateWPM(typed.length, timeElapsed);
 
-  return { status, timer, typed, errors, accuracy, wpm, totalKeystrokes, startGame, resetEngine, handleInput };
+  return { status, timer, typed, errors, accuracy, wpm, totalKeystrokes, wpmHistory, startGame, resetEngine, handleInput };
 };
 
 export default useTypingEngine;
