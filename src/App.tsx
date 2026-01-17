@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { getRandomPassage, type Difficulty } from './utils/textGenerator';
+// FIX: Ensure this matches your renamed file 'textGenerator.ts' (Capital G)
+import { getRandomPassage, type Difficulty } from './utils/textgenerator';
 import useTypingEngine, { type Mode } from './hooks/useTypingEngine';
 import useLocalStorage from './hooks/useLocalStorage';
 import useSoundEngine from './hooks/useSoundEngine';
@@ -10,7 +11,7 @@ import Controls from './components/ui/Controls';
 import StatsDisplay from './components/typing/StatsDisplay';
 import TypingArea from './components/typing/TypingArea';
 import ResultsModal from './components/ui/ResultsModal';
-import HistoryModal, { type HistoryItem } from './components/ui/HistoryModal'; // 👈 Import History
+import HistoryModal, { type HistoryItem } from './components/ui/HistoryModal';
 import restartIcon from './assets/images/icon-restart.svg';
 
 function App() {
@@ -20,14 +21,42 @@ function App() {
 
   const [text, setText] = useState(() => getRandomPassage('medium').text);
   const [highScore, setHighScore] = useLocalStorage<number>('typing-speed-high-score', 0);
-  const [history, setHistory] = useLocalStorage<HistoryItem[]>('typing-speed-history', []); // 👈 History State
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false); // 👈 Modal State
+  const [history, setHistory] = useLocalStorage<HistoryItem[]>('typing-speed-history', []);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [resultMessage, setResultMessage] = useState('');
 
-  const { status, timer, typed, wpm, accuracy, startGame, handleInput, resetEngine, errors } = useTypingEngine(mode, timeOption);
+  // 1. NEW: Create the Finish Handler (Moves logic out of useEffect)
+  // This runs exactly once when the engine says the game is done.
+  const handleGameFinish = useCallback((finalWpm: number, finalAccuracy: number) => {
+    // Save to History
+    const newEntry: HistoryItem = {
+      wpm: finalWpm,
+      accuracy: finalAccuracy,
+      date: new Date().toISOString(),
+      mode: mode === 'timed' ? `timed-${timeOption}` : 'passage'
+    };
+    setHistory(prev => [...prev, newEntry]);
+
+    // Check High Score
+    if (highScore === 0 && finalWpm > 0) {
+      setResultMessage('Baseline Established!');
+      setHighScore(finalWpm);
+    } else if (finalWpm > highScore) {
+      setResultMessage('High Score Smashed!');
+      setHighScore(finalWpm);
+    } else {
+      setResultMessage('Test Complete!');
+    }
+  }, [highScore, mode, timeOption, setHistory, setHighScore]);
+
+  // 2. UPDATED: Pass the callback to the hook as the 3rd argument
+  const { status, timer, typed, wpm, accuracy, startGame, handleInput, resetEngine, errors } = useTypingEngine(
+    mode, 
+    timeOption, 
+    handleGameFinish
+  );
   
   const inputRef = useRef<HTMLInputElement>(null);
-  const resultsProcessed = useRef(false);
   const { playClick, playError, playSuccess, toggleMute, isMuted } = useSoundEngine();
 
   // Sound Effect Logic
@@ -51,7 +80,7 @@ function App() {
   }, [typed, errors, status, playClick, playError]);
 
   useEffect(() => {
-    if (status === 'finished' && !resultsProcessed.current) {
+    if (status === 'finished') {
       playSuccess();
     }
   }, [status, playSuccess]);
@@ -60,38 +89,11 @@ function App() {
   useEffect(() => {
     if (status === 'running' && inputRef.current) {
       inputRef.current.focus();
-      resultsProcessed.current = false;
     }
   }, [status]);
 
-  // ✅ FINISH LOGIC: Save History & High Score
-  useEffect(() => {
-    if (status === 'finished') {
-      if (resultsProcessed.current) return;
-
-      // 1. Save History
-      const newEntry: HistoryItem = {
-        wpm,
-        accuracy,
-        date: new Date().toISOString(),
-        mode: mode === 'timed' ? `timed-${timeOption}` : 'passage'
-      };
-      setHistory(prev => [...prev, newEntry]);
-
-      // 2. High Score Logic
-      if (highScore === 0 && wpm > 0) {
-        setResultMessage('Baseline Established!');
-        setHighScore(wpm);
-      } else if (wpm > highScore) {
-        setResultMessage('High Score Smashed!');
-        setHighScore(wpm);
-      } else {
-        setResultMessage('Test Complete!');
-      }
-
-      resultsProcessed.current = true;
-    }
-  }, [status, wpm, accuracy, highScore, setHighScore, setHistory, mode, timeOption]);
+  // NOTE: The old "Finish Logic" useEffect has been removed from here.
+  // It is now handled by handleGameFinish above.
 
   useEffect(() => {
     resetEngine();
@@ -130,8 +132,8 @@ function App() {
         </div>
       </div>
 
-      <div className="relative w-full max-w-5xl outline-none border-y border-neutral-800/50 py-10 md:py-14 min-h-[250px] mb-32 md:mb-8">
-        <div className={`transition-all duration-500 ease-out ${status === 'idle' ? 'blur-[8px] opacity-40 scale-[0.98]' : 'blur-0 opacity-100 scale-100'}`}>
+      <div className="relative w-full max-w-5xl outline-none border-y border-neutral-800/50 py-10 md:py-14 min-h-62.5 mb-32 md:mb-8">
+        <div className={`transition-all duration-500 ease-out ${status === 'idle' ? 'blur-sm opacity-40 scale-[0.98]' : 'blur-0 opacity-100 scale-100'}`}>
           <TypingArea text={text} typed={typed} />
         </div>
         {status === 'idle' && (

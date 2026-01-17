@@ -59,7 +59,7 @@ const TypingArea = ({ text, typed }: TypingAreaProps) => {
   return (
     <div className="w-full px-1">
       <div 
-        className="font-medium text-2xl md:text-3xl lg:text-4xl leading-relaxed md:leading-loose tracking-wide break-words select-none pointer-events-none text-left max-h-[250px] overflow-hidden relative"
+        className="font-medium text-2xl md:text-3xl lg:text-4xl leading-relaxed md:leading-loose tracking-wide wrap-break-words select-none pointer-events-none text-left max-h-26 overflow-hidden relative"
       >
         {text.split('').map((char, index) => {
           const isTyped = index < typed.length;

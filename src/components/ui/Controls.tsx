@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, memo } from 'react'; // Added memo
-import { type Difficulty } from '../../utils/textGenerator';
+import { type Difficulty } from '../../utils/textgenerator';
 import { type Mode } from '../../hooks/useTypingEngine';
 import arrowIcon from '../../assets/images/icon-down-arrow.svg'; 
 
