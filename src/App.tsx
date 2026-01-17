@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-// FIX: Ensure this matches your renamed file 'textGenerator.ts' (Capital G)
-import { getRandomPassage, type Difficulty } from './utils/temp';
+import { getRandomPassage, type Difficulty } from './utils/textGenerator';
 import useTypingEngine, { type Mode } from './hooks/useTypingEngine';
 import useLocalStorage from './hooks/useLocalStorage';
 import useSoundEngine from './hooks/useSoundEngine';
@@ -114,14 +113,16 @@ function App() {
     <div className="min-h-screen bg-neutral-900 text-neutral-200 flex flex-col items-center pt-8 md:pt-20 px-4 sm:px-6 font-sans selection:bg-yellow-400/30 touch-manipulation" onClick={() => inputRef.current?.focus()}>
       
       {/* Header with History & Sound Buttons */}
-      <div className="relative z-50 w-full max-w-5xl flex justify-center">
-        <Header 
-          highScore={highScore} 
-          onOpenHistory={() => setIsHistoryOpen(true)}
-          isMuted={isMuted}
-          onToggleMute={toggleMute}
-        />
-      </div>
+      {status !== 'finished' && (
+        <div className="relative z-50 w-full max-w-5xl flex justify-center">
+          <Header 
+            highScore={highScore} 
+            onOpenHistory={() => setIsHistoryOpen(true)}
+            isMuted={isMuted}
+            onToggleMute={toggleMute}
+          />
+        </div>
+      )}
 
       <div className="w-full max-w-5xl flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8 md:mb-12 relative z-40">
         <div className="w-full md:w-auto">
