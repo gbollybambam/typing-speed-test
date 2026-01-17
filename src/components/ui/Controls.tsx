@@ -1,10 +1,8 @@
-import { useState, useRef, useEffect, memo } from 'react'; // Added memo
+import { useState, useRef, useEffect, memo } from 'react';
 import { type Difficulty } from '../../utils/textGenerator';
 import { type Mode } from '../../hooks/useTypingEngine';
 import arrowIcon from '../../assets/images/icon-down-arrow.svg'; 
 
-// ... [Keep your existing interfaces and CustomSelect component exactly as they were] ...
-// (I am omitting the interfaces/CustomSelect code here to save space, paste your previous code for them here)
 interface SelectOption {
   label: string;
   value: string;
@@ -21,7 +19,6 @@ interface CustomSelectProps {
 }
 
 const CustomSelect = ({ value, options, onChange, isOpen, onToggle, onClose, disabled }: CustomSelectProps) => {
-    // ... [Paste your existing CustomSelect code here] ...
     const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,26 +37,29 @@ const CustomSelect = ({ value, options, onChange, isOpen, onToggle, onClose, dis
     <div ref={containerRef} className="relative w-1/2 md:hidden">
       <button 
         onClick={(e) => { e.stopPropagation(); if (!disabled) onToggle(); }} 
-        className={`relative w-full flex items-center justify-between bg-neutral-900 border border-neutral-800 text-white text-sm font-medium py-3 pl-4 pr-10 rounded-xl transition-colors ${isOpen ? 'border-neutral-700' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-neutral-700'}`}
+        // UPDATED: Semantic colors for mobile dropdown trigger
+        className={`relative w-full flex items-center justify-between bg-[var(--bg-secondary)] border border-[var(--text-secondary)]/20 text-[var(--text-primary)] text-sm font-medium py-3 pl-4 pr-10 rounded-xl transition-colors ${isOpen ? 'border-[var(--text-secondary)]/50' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-[var(--text-secondary)]/50'}`}
         disabled={disabled}
         type="button"
       >
         <span className="truncate">{selectedOption?.label}</span>
-        <img src={arrowIcon} alt="" className={`w-2.5 h-2.5 opacity-60 transition-transform duration-200 absolute right-4 ${isOpen ? 'rotate-180' : ''}`} />
+        <img src={arrowIcon} alt="" className={`w-2.5 h-2.5 opacity-60 transition-transform duration-200 absolute right-4 invert dark:invert-0 ${isOpen ? 'rotate-180' : ''}`} style={{ filter: 'var(--icon-filter)' }} />
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-neutral-900 border border-neutral-800 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top p-2">
+        // UPDATED: Semantic colors for mobile dropdown menu
+        <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-[var(--bg-secondary)] border border-[var(--text-secondary)]/20 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top p-2">
           <ul>
             {options.map((option) => (
               <li key={option.value}>
                 <button
                   onClick={(e) => { e.stopPropagation(); onChange(option.value); onClose(); }}
-                  className={`w-full text-left flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors ${option.value === value ? 'text-white bg-neutral-800' : 'text-neutral-300 hover:bg-neutral-800/50 hover:text-white'}`}
+                  // UPDATED: Semantic colors for dropdown items
+                  className={`w-full text-left flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors ${option.value === value ? 'text-[var(--text-primary)] bg-[var(--text-secondary)]/10' : 'text-[var(--text-secondary)] hover:bg-[var(--text-secondary)]/5 hover:text-[var(--text-primary)]'}`}
                   type="button"
                 >
-                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${option.value === value ? 'border-blue-600 bg-blue-600' : 'border-neutral-600 bg-transparent'}`}>
-                    {option.value === value && <div className="w-2 h-2 rounded-full bg-neutral-900" />}
+                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${option.value === value ? 'border-[var(--accent)] bg-[var(--accent)]' : 'border-[var(--text-secondary)] bg-transparent'}`}>
+                    {option.value === value && <div className="w-2 h-2 rounded-full bg-[var(--bg-primary)]" />}
                   </div>
                   <span>{option.label}</span>
                 </button>
@@ -88,7 +88,6 @@ const Controls = ({ difficulty, setDifficulty, mode, setMode, timeOption, setTim
 
   const currentConfigValue = mode === 'passage' ? 'passage' : `timed-${timeOption}`;
   
-  // Memoize this handler to prevent recreation
   const handleConfigChange = (val: string) => {
     if (val === 'passage') {
       setMode('passage');
@@ -114,14 +113,21 @@ const Controls = ({ difficulty, setDifficulty, mode, setMode, timeOption, setTim
 
   const renderDesktopGroup = (label: string, items: { label: string, value: string, isActive: boolean, onClick: () => void }[]) => (
     <div className="flex items-center gap-2">
-      <span className="text-neutral-500 font-medium text-xs hidden xl:block whitespace-nowrap">{label}</span>
-      <div className="flex items-center bg-neutral-900/50 p-1 rounded-lg border border-neutral-800/50">
+      <span className="text-[var(--text-secondary)] font-medium text-xs hidden xl:block whitespace-nowrap">{label}</span>
+      
+      {/* UPDATED: Container uses semantic variables */}
+      <div className="flex items-center bg-[var(--bg-secondary)] p-1 rounded-lg border border-[var(--text-secondary)]/20 shadow-sm">
         {items.map((item) => (
           <button
             key={item.value}
             onClick={item.onClick}
             disabled={isDisabled}
-            className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all border whitespace-nowrap ${item.isActive ? 'bg-blue-500/10 border-blue-500 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.15)]' : 'bg-transparent border-transparent text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800/50'} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            // UPDATED: Buttons use accent color for active state, text-secondary for inactive
+            className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all border whitespace-nowrap ${
+              item.isActive 
+                ? 'bg-[var(--accent)]/10 border-[var(--accent)] text-[var(--accent)] shadow-sm font-bold' 
+                : 'bg-transparent border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--text-secondary)]/5'
+            } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {item.label}
           </button>
@@ -155,5 +161,4 @@ const Controls = ({ difficulty, setDifficulty, mode, setMode, timeOption, setTim
   );
 };
 
-// 3. Export as Memo
 export default memo(Controls);

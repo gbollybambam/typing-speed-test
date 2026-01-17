@@ -24,15 +24,26 @@ function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [resultMessage, setResultMessage] = useState('');
   
-  // ✅ NEW: State to hold the graph data for the modal
+  // Theme State (Default to 'dark')
+  const [theme, setTheme] = useLocalStorage<'dark' | 'light'>('typing-speed-theme', 'dark');
+  
+  // Graph Data State
   const [graphData, setGraphData] = useState<WpmPoint[]>([]);
 
-  // 1. UPDATED: Finish Handler now accepts historyData
+  // Toggle Theme Function
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  }, [setTheme]);
+
+  // Apply Theme to Body
+  useEffect(() => {
+    document.body.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  // Finish Handler
   const handleGameFinish = useCallback((finalWpm: number, finalAccuracy: number, historyData: WpmPoint[]) => {
-    // Save Graph Data to State
     setGraphData(historyData);
 
-    // Save to History (Local Storage)
     const newEntry: HistoryItem = {
       wpm: finalWpm,
       accuracy: finalAccuracy,
@@ -41,7 +52,6 @@ function App() {
     };
     setHistory(prev => [...prev, newEntry]);
 
-    // Check High Score
     if (highScore === 0 && finalWpm > 0) {
       setResultMessage('Baseline Established!');
       setHighScore(finalWpm);
@@ -53,7 +63,7 @@ function App() {
     }
   }, [highScore, mode, timeOption, setHistory, setHighScore]);
 
-  // 2. Engine Hook
+  // Engine Hook
   const { status, timer, typed, wpm, accuracy, startGame, handleInput, resetEngine, errors } = useTypingEngine(
     mode, 
     timeOption, 
@@ -112,9 +122,10 @@ function App() {
   }, [difficulty, resetEngine]);
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-neutral-200 flex flex-col items-center pt-8 md:pt-20 px-4 sm:px-6 font-sans selection:bg-yellow-400/30 touch-manipulation" onClick={() => inputRef.current?.focus()}>
+    // ✅ CHANGED: Uses semantic CSS variables for background and text
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col items-center pt-8 md:pt-20 px-4 sm:px-6 font-sans selection:bg-[var(--accent)]/30 touch-manipulation transition-colors duration-300" onClick={() => inputRef.current?.focus()}>
       
-      {/* Header with History & Sound Buttons - Hides when finished */}
+      {/* Header - Now passes theme props */}
       {status !== 'finished' && (
         <div className="relative z-50 w-full max-w-5xl flex justify-center">
           <Header 
@@ -122,6 +133,8 @@ function App() {
             onOpenHistory={() => setIsHistoryOpen(true)}
             isMuted={isMuted}
             onToggleMute={toggleMute}
+            theme={theme}             // <-- NEW
+            onToggleTheme={toggleTheme} // <-- NEW
           />
         </div>
       )}
@@ -135,16 +148,20 @@ function App() {
         </div>
       </div>
 
-      <div className="relative w-full max-w-5xl outline-none border-y border-neutral-800/50 py-10 md:py-14 min-h-62.5 mb-32 md:mb-8">
+      <div className="relative w-full max-w-5xl outline-none border-y border-[var(--text-secondary)]/20 py-10 md:py-14 min-h-62.5 mb-32 md:mb-8">
         <div className={`transition-all duration-500 ease-out ${status === 'idle' ? 'blur-sm opacity-40 scale-[0.98]' : 'blur-0 opacity-100 scale-100'}`}>
           <TypingArea text={text} typed={typed} />
         </div>
+        
         {status === 'idle' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center z-10 -mt-12">
-            <button onClick={(e) => { e.stopPropagation(); startGame(); }} className="px-8 py-4 bg-blue-600 text-white text-lg font-bold rounded-xl shadow-lg hover:bg-blue-500 transition-transform active:scale-95">
+            <button 
+              onClick={(e) => { e.stopPropagation(); startGame(); }} 
+              className="px-8 py-4 bg-blue-600 text-white text-lg font-bold rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:bg-blue-500 transition-all active:scale-95"
+            >
               Start Typing Test
             </button>
-            <p className="mt-4 text-neutral-300 font-medium text-lg sm:text-base animate-pulse">Or click the text and start typing</p>
+            <p className="mt-4 text-[var(--text-secondary)] font-medium text-lg sm:text-base animate-pulse">Or click the text and start typing</p>
           </div>
         )}
         <input ref={inputRef} type="text" className="absolute opacity-0 w-0 h-0 top-0 left-0" value={typed} onChange={(e) => handleInput(e, text)} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" data-gramm="false" />
@@ -152,21 +169,23 @@ function App() {
 
       {status === 'running' && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 md:translate-x-0 md:static md:mt-12 z-40 animate-in fade-in slide-in-from-bottom-4">
-           <button onClick={(e) => { e.stopPropagation(); handleRestart(); }} className="px-6 py-3.5 bg-neutral-800 text-neutral-200 font-bold text-base rounded-xl hover:bg-neutral-700 hover:text-white transition-all border border-neutral-700/50 shadow-2xl flex items-center gap-3 active:scale-95">
+           <button 
+             onClick={(e) => { e.stopPropagation(); handleRestart(); }} 
+             className="px-6 py-3.5 bg-[var(--bg-secondary)] text-[var(--text-primary)] font-bold text-base rounded-xl hover:bg-[var(--text-secondary)]/10 transition-all border border-[var(--text-secondary)]/30 shadow-2xl flex items-center gap-3 active:scale-95"
+           >
              <span>Restart Test</span>
-             <img src={restartIcon} alt="Restart" className="w-4 h-4 text-neutral-400 opacity-80" />
+             <img src={restartIcon} alt="Restart" className="w-4 h-4 opacity-60 invert-[.5]" />
            </button>
         </div>
       )}
 
-      {/* ✅ UPDATED: Passing history data to the Results Modal */}
       <ResultsModal 
         status={status} 
         wpm={wpm} 
         accuracy={accuracy} 
         correctChars={typed.length - errors} 
         errorChars={errors} 
-        history={graphData} // <--- This connects the graph!
+        history={graphData} 
         resultMessage={resultMessage} 
         onRestart={handleRestart} 
       />
