@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react'; // Added useRef
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { calculateAccuracy, calculateWPM } from '../utils/calculateStats';
 
 export type GameStatus = 'idle' | 'running' | 'finished';
 export type Mode = 'timed' | 'passage';
 
-// Add onFinish to the props
 const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: number, finalAccuracy: number) => void) => {
   const [status, setStatus] = useState<GameStatus>('idle');
   const [timer, setTimer] = useState(mode === 'timed' ? timeOption : 0);
@@ -25,23 +24,19 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
     setTyped('');
     setErrors(0);
     setTotalKeystrokes(0);
-    hasFinished.current = false; // Reset finish flag
+    hasFinished.current = false;
   }, [getInitialTimer]);
 
-  // Centralized Stop Function
   const stopGame = useCallback(() => {
     setStatus('finished');
     
     if (!hasFinished.current) {
         hasFinished.current = true;
         
-        // Calculate stats one last time to be sure
-        // We use the current state values here
         const timeElapsed = mode === 'timed' ? (timeOption - timer) : timer;
         const finalWpm = calculateWPM(typed.length, timeElapsed);
         const finalAccuracy = calculateAccuracy(totalKeystrokes, errors);
 
-        // Trigger the callback if it exists
         if (onFinish) {
             onFinish(finalWpm, finalAccuracy);
         }
@@ -57,7 +52,6 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
     hasFinished.current = false;
   }, [getInitialTimer]);
 
-  // Timer Logic
   useEffect(() => {
     if (status !== 'running') return;
 
@@ -66,7 +60,7 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
         if (mode === 'timed') {
           if (prev <= 1) {
             clearInterval(intervalId);
-            stopGame(); // Use the centralized stop function
+            stopGame();
             return 0;
           }
           return prev - 1;
@@ -96,7 +90,7 @@ const useTypingEngine = (mode: Mode, timeOption: number, onFinish?: (finalWpm: n
     setTyped(val);
 
     if (val.length === targetText.length) {
-      stopGame(); // Use the centralized stop function
+      stopGame();
     }
   }, [status, typed, startGame, stopGame]);
 
