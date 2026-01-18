@@ -101,7 +101,7 @@ It also taught me the importance of **Layout Stability**. Adding the Light Mode 
 In the future, I plan to:
 1.  **Backend Integration:** Connect to a Django/PostgreSQL backend to save user history permanently.
 2.  **Global Leaderboard:** Allow users to compete for the top spot on a daily/weekly basis.
-3.  **Multiplayer:** Real-time 1v1 typing races using WebSockets.
+3.  **Multiplayer:** Real-time 1v1 typing races using WebSockets🎮.
 
 ---
 
